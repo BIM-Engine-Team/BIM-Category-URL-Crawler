@@ -1,0 +1,124 @@
+{
+  "exploration_summary": {
+    "start_url": "https://www.sherwin-williams.com/homeowners",
+    "total_pages_visited": 4,
+    "total_nodes_created": 4,
+    "series_detected": 0,
+    "max_depth_reached": 4
+  },
+  "website_structure": {
+    "nodes": {
+      "https://www.sherwin-williams.com/homeowners": {
+        "url": "https://www.sherwin-williams.com/homeowners",
+        "node_type": "listing",
+        "children": [
+          "https://www.sherwin-williams.com/webapp/wcs/stores/servlet/DisplayRegistration?new=true&catalogId=11051&langId=-1&storeId=10151",
+          "https://www.sherwin-williams.com/homeowners/products/promotions",
+          "https://www.sherwin-williams.com/homeowners/products",
+          "https://www.sherwin-williams.com/homeowners/products/interior-paint-coatings",
+          "https://www.sherwin-williams.com/homeowners/products/tools-supplies"
+        ],
+        "exploration_status": "explored",
+        "is_terminal": false,
+        "link_series": null
+      },
+      "https://www.sherwin-williams.com/webapp/wcs/stores/servlet/DisplayRegistration?new=true&catalogId=11051&langId=-1&storeId=10151": {
+        "url": "https://www.sherwin-williams.com/webapp/wcs/stores/servlet/DisplayRegistration?new=true&catalogId=11051&langId=-1&storeId=10151",
+        "node_type": "other",
+        "children": [
+          "https://www.sherwin-williams.com/webapp/wcs/stores/servlet/DisplayRegistration?new=true&catalogId=11051&langId=-1&storeId=10151",
+          "https://www.sherwin-williams.com/ClickInfo?evtype=CpgnClick&mpe_id=10011&intv_id=0&storeId=10151&catalogId=11051&langId=-1&expDataType=MarketingContent&expDataUniqueID=3177502&URL=StoreView%3fstoreId%3d10151%26catalogId%3d11051",
+          "https://www.sherwin-williams.com/ClickInfo?evtype=CpgnClick&mpe_id=10011&intv_id=0&storeId=10151&catalogId=11051&langId=-1&expDataType=MarketingContent&expDataUniqueID=3177501&URL=StoreView%3fstoreId%3d10151%26catalogId%3d11051"
+        ],
+        "exploration_status": "explored",
+        "is_terminal": false,
+        "link_series": null
+      },
+      "https://www.sherwin-williams.com/homeowners/products/promotions": {
+        "url": "https://www.sherwin-williams.com/homeowners/products/promotions",
+        "node_type": "listing",
+        "children": [
+          "https://www.sherwin-williams.com/homeowners/products/superpaint-exterior-latex-paint-regional",
+          "https://www.sherwin-williams.com/homeowners/products/cashmere-interior-acrylic-latex",
+          "https://www.sherwin-williams.com/homeowners/products/superpaint-interior-acrylic-with-air-purifying-technology",
+          "https://www.sherwin-williams.com/homeowners/products",
+          "https://www.sherwin-williams.com/homeowners/products/superpaint-interior-latex-with-sanitizing-technology"
+        ],
+        "exploration_status": "explored",
+        "is_terminal": false,
+        "link_series": null
+      },
+      "https://www.sherwin-williams.com/homeowners/products": {
+        "url": "https://www.sherwin-williams.com/homeowners/products",
+        "node_type": "listing",
+        "children": [
+          "https://www.sherwin-williams.com/webapp/wcs/stores/servlet/DisplayRegistration?new=true&catalogId=11051&langId=-1&storeId=10151",
+          "https://www.sherwin-williams.com/homeowners/products/tools-supplies/brushes",
+          "https://www.sherwin-williams.com/homeowners/products/exterior-paint-coatings/exterior-paint",
+          "https://www.sherwin-williams.com/homeowners/products/tools-supplies/tape-masking",
+          "https://www.sherwin-williams.com/homeowners/products/exterior-paint-coatings/exterior-wood-stains-sealers-clear-topcoats"
+        ],
+        "exploration_status": "explored",
+        "is_terminal": false,
+        "link_series": null
+      }
+    },
+    "detected_series": {},
+    "visited_urls": [
+      "https://www.sherwin-williams.com/homeowners",
+      "https://www.sherwin-williams.com/webapp/wcs/stores/servlet/DisplayRegistration?new=true&catalogId=11051&langId=-1&storeId=10151",
+      "https://www.sherwin-williams.com/homeowners/products/promotions",
+      "https://www.sherwin-williams.com/homeowners/products"
+    ]
+  },
+  "crawling_patterns": [],
+  "metadata": {
+    "exploration_config": {
+      "max_depth": 4,
+      "max_pages": 200,
+      "min_series_count": 3,
+      "max_samples_per_series": 5,
+      "request_delay": 1.5,
+      "architecture_keywords": [
+        "doors",
+        "windows",
+        "roofing",
+        "flooring",
+        "siding",
+        "tiles",
+        "lumber",
+        "hardware",
+        "fixtures",
+        "materials",
+        "construction",
+        "building",
+        "architectural",
+        "commercial",
+        "residential"
+      ],
+      "skip_patterns": [
+        "contact",
+        "about",
+        "legal",
+        "privacy",
+        "terms",
+        "login",
+        "register",
+        "account",
+        "cart",
+        "checkout",
+        "support"
+      ],
+      "prioritize_patterns": [
+        "products",
+        "catalog",
+        "categories",
+        "specifications",
+        "materials",
+        "gallery",
+        "portfolio"
+      ]
+    },
+    "timestamp": 420069.49912
+  }
+}
