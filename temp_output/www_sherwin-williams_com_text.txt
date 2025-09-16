@@ -1,0 +1,969 @@
+Title: Primers - Sherwin-Williams
+URL: https://www.sherwin-williams.com/homeowners/products/interior-paint-coatings/interior-primers
+Scraped at: 2025-09-16T16:04:50.041439
+==================================================
+
+Primers - Sherwin-Williams
+Message Dialog
+Close
+Display Update Message
+Your session is about to timeout due to inactivity.  Click OK to extend your time for an additional 30 minutes.
+OK
+This item has been successfully added to your list.
+Continue Shopping
+Master
+Current Order
+You have added
+Your Cart
+									
+										(0 items)
+Subtotal: $0.00
+View Your Cart
+Continue Shopping
+Press enter to collapse or expand the menu.
+GO TO Interior Paint & Coatings
+Rating
+5 Star rating out of 5
+(
+2
+)
+5
+(2)
+4 Star rating out of 5
+(
+5
+)
+4
+(5)
+3 Star rating out of 5
+(
+7
+)
+3
+(7)
+2 Star rating out of 5
+(
+2
+)
+2
+(2)
+Surface Condition
+Bare Surfaces
+(
+16
+)
+Bare Surfaces
+(16)
+Previously Painted Surfaces
+(
+14
+)
+Previously Painted Surfaces
+(14)
+New Concrete
+(
+2
+)
+New Concrete
+(2)
+Surface
+Bare Surfaces
+(
+18
+)
+Bare Surfaces
+(18)
+Previously Painted Surfaces
+(
+17
+)
+Previously Painted Surfaces
+(17)
+Wood
+(
+6
+)
+Wood
+(6)
+Drywall
+(
+4
+)
+Drywall
+(4)
+Masonry
+(
+4
+)
+Masonry
+(4)
+Ceiling Tiles
+(
+3
+)
+Ceiling Tiles
+(3)
+Paneling
+(
+3
+)
+Paneling
+(3)
+Plaster
+(
+3
+)
+Plaster
+(3)
+Aluminum
+(
+2
+)
+Aluminum
+(2)
+Ceramic Tile
+(
+2
+)
+Ceramic Tile
+(2)
+New Concrete
+(
+2
+)
+New Concrete
+(2)
+PVC
+(
+2
+)
+PVC
+(2)
+Plywood
+(
+2
+)
+Plywood
+(2)
+Stucco
+(
+2
+)
+Stucco
+(2)
+Brick
+(
+1
+)
+Brick
+(1)
+Concrete
+(
+1
+)
+Concrete
+(1)
+Concrete & Masonry
+(
+1
+)
+Concrete & Masonry
+(1)
+Glass
+(
+1
+)
+Glass
+(1)
+Glossy Surfaces
+(
+1
+)
+Glossy Surfaces
+(1)
+Hardboard
+(
+1
+)
+Hardboard
+(1)
+Show All
+Features
+Fast Drying
+(
+11
+)
+Fast Drying
+(11)
+Adhesion Promoting
+(
+5
+)
+Adhesion Promoting
+(5)
+Stain Blocking
+(
+5
+)
+Stain Blocking
+(5)
+Alkaline / pH Resistant
+(
+4
+)
+Alkaline / pH Resistant
+(4)
+Indoor/Outdoor Use
+(
+3
+)
+Indoor/Outdoor Use
+(3)
+Odor Eliminating Technology
+(
+3
+)
+Odor Eliminating Technology
+(3)
+Efflorescence Resistant
+(
+2
+)
+Efflorescence Resistant
+(2)
+Masks Imperfections
+(
+2
+)
+Masks Imperfections
+(2)
+Stain Locking Technology
+(
+2
+)
+Stain Locking Technology
+(2)
+Excellent Adhesion
+(
+1
+)
+Excellent Adhesion
+(1)
+Great Adhesion
+(
+1
+)
+Great Adhesion
+(1)
+Interior/Exterior
+(
+1
+)
+Interior/Exterior
+(1)
+Low Temp Application (>35° F)
+(
+1
+)
+Low Temp Application (>35° F)
+(1)
+Mildew Resistant
+(
+1
+)
+Mildew Resistant
+(1)
+Sealing Properties
+(
+1
+)
+Sealing Properties
+(1)
+Coating Type
+Latex (Water-Based)
+(
+11
+)
+Latex (Water-Based)
+(11)
+Oil-Based
+(
+3
+)
+Oil-Based
+(3)
+Styrene Acrylic
+(
+2
+)
+Styrene Acrylic
+(2)
+Shellac
+(
+1
+)
+Shellac
+(1)
+Container Size
+1 Gallon
+(
+18
+)
+1 Gallon
+(18)
+5 Gallon
+(
+14
+)
+5 Gallon
+(14)
+1 Quart
+(
+10
+)
+1 Quart
+(10)
+12 oz
+(
+2
+)
+12 oz
+(2)
+Your Sherwin-Williams
+Update Location
+{{storeData.address | sentenceCase}}
+{{storeData.city | sentenceCase}},
+{{storeData.state}}
+{{storeData.zip}}
+{{storeData.phone
+							| phone}}
+{{storeData.phone | phone}}
+Get Directions
+Add to
+								My Account
+Find Another Store
+Click the link below and get directions to your closest
+						Sherwin-Williams store.
+Get Directions
+Living Well
+A super-simple choice for the well-being of your home
+Learn More
+See Your Home In Full Color
+Launch ColorSnap
+®
+Visualizer for Web
+ColorSnap
+®
+Precision
+Learn More
+Thank You
+For rating Sherwin-Williams Highest in Customer Satisfaction with Interior and Exterior Paints
+Homeowners
+\
+Paints & Supplies
+\
+Interior Paint & Coatings
+\
+Primers
+Primers
+Product List
+if(typeof(addReqListsJS8_3074457345618278256) == "undefined" || addReqListsJS8_3074457345618278256 == null || !addReqListsJS8_3074457345618278256) {
+		addReqListsJS8_3074457345618278256 = new AddToRequisitionListsJS(
+			"10151",
+			"11051",
+			"-1",
+			"8_3074457345618278256requisitionListContent",
+			"8_3074457345618278256requisitionListSelect",
+			"8_3074457345618278256createNewListMenu",
+			"8_3074457345618278256listTypeMenu",
+			"8_3074457345618278256newListNameInput",			
+			"8_3074457345618278256listType",
+			"8_3074457345618278256productAdded",
+			"none",
+			"AddToRequisitionListsJS8_3074457345618278256");
+			
+			dojo.addOnLoad(function() {
+			
+			dojo.topic.subscribe('ShopperActions_Changed', addReqListsJS8_3074457345618278256.setQuantity);
+			
+			dojo.topic.subscribe('DefiningAttributes_Resolved', addReqListsJS8_3074457345618278256.setCatEntryId);
+			
+			dojo.topic.subscribe('DefiningAttributes_Changed', addReqListsJS8_3074457345618278256.setCatEntryId);
+			
+		});
+	}
+Add To Requisition List
+Sign In or Register to access your lists.
+Don't have an account?
+Register
+Sort By
+Product Name (A-Z)
+Product Name (Z-A)
+Highest Rated
+1 - 9 of 19 
+                                    items
+1
+2
+3
+Next
+9 Per Page
+30 per page
+45 per page
+Filter
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+Premium Wall & Wood Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+Extreme Bond Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+Multi-Purpose Interior/Exterior Latex Primer/Sealer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+LOXON Concrete & Masonry Primer/Sealer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+Drywall Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+PrimeRx Peel Bonding Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+White Pigmented Shellac Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+Extreme Block Interior/Exterior Stain Blocking Waterbased Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+{{ ctrl.avgRatingForScrReaders }} Star rating out of 5.
+{{ ctrl.totalReviewCount }} Reviews
+Not Yet Rated
+Fast Drying Primer
+Your Price
+Loading price...
+Please select a store to obtain price.
+Select store...
+Sign In
+to order online
+Buy Now
+Compare
+|
+Coupon
+|
+Data Sheets
+1 - 9 of 19 
+	                            items
+1
+2
+3
+Next
+9 Per Page
+30 per page
+45 per page
+All prices displayed are for U.S. Sherwin-Williams locations and are in U.S. Dollars. Prices do not include taxes or other fees as applicable.
+Compare
+Add more to compare
+Added
+Product Comparison tool
+Select 2-5 products to compare
+Reset
+Compare
+Filter by
+Reset
+Apply
+Press enter to collapse or expand the menu.
+Rating
+Rating
+Facet Value
+5
+(
+2
+)
+5
+(2)
+Facet Value
+4
+(
+5
+)
+4
+(5)
+Facet Value
+3
+(
+7
+)
+3
+(7)
+Facet Value
+2
+(
+2
+)
+2
+(2)
+Surface Condition
+Surface Condition
+Facet Value
+Bare Surfaces
+(
+16
+)
+Bare Surfaces
+(16)
+Facet Value
+Previously Painted Surfaces
+(
+14
+)
+Previously Painted Surfaces
+(14)
+Facet Value
+New Concrete
+(
+2
+)
+New Concrete
+(2)
+Surface
+Surface
+Facet Value
+Bare Surfaces
+(
+18
+)
+Bare Surfaces
+(18)
+Facet Value
+Previously Painted Surfaces
+(
+17
+)
+Previously Painted Surfaces
+(17)
+Facet Value
+Wood
+(
+6
+)
+Wood
+(6)
+Facet Value
+Drywall
+(
+4
+)
+Drywall
+(4)
+Facet Value
+Masonry
+(
+4
+)
+Masonry
+(4)
+Facet Value
+Ceiling Tiles
+(
+3
+)
+Ceiling Tiles
+(3)
+Facet Value
+Paneling
+(
+3
+)
+Paneling
+(3)
+Facet Value
+Plaster
+(
+3
+)
+Plaster
+(3)
+Facet Value
+Aluminum
+(
+2
+)
+Aluminum
+(2)
+Facet Value
+Ceramic Tile
+(
+2
+)
+Ceramic Tile
+(2)
+Facet Value
+New Concrete
+(
+2
+)
+New Concrete
+(2)
+Facet Value
+PVC
+(
+2
+)
+PVC
+(2)
+Facet Value
+Plywood
+(
+2
+)
+Plywood
+(2)
+Facet Value
+Stucco
+(
+2
+)
+Stucco
+(2)
+Facet Value
+Brick
+(
+1
+)
+Brick
+(1)
+Facet Value
+Concrete
+(
+1
+)
+Concrete
+(1)
+Facet Value
+Concrete & Masonry
+(
+1
+)
+Concrete & Masonry
+(1)
+Facet Value
+Glass
+(
+1
+)
+Glass
+(1)
+Facet Value
+Glossy Surfaces
+(
+1
+)
+Glossy Surfaces
+(1)
+Facet Value
+Hardboard
+(
+1
+)
+Hardboard
+(1)
+Show All
+Features
+Features
+Facet Value
+Fast Drying
+(
+11
+)
+Fast Drying
+(11)
+Facet Value
+Adhesion Promoting
+(
+5
+)
+Adhesion Promoting
+(5)
+Facet Value
+Stain Blocking
+(
+5
+)
+Stain Blocking
+(5)
+Facet Value
+Alkaline / pH Resistant
+(
+4
+)
+Alkaline / pH Resistant
+(4)
+Facet Value
+Indoor/Outdoor Use
+(
+3
+)
+Indoor/Outdoor Use
+(3)
+Facet Value
+Odor Eliminating Technology
+(
+3
+)
+Odor Eliminating Technology
+(3)
+Facet Value
+Efflorescence Resistant
+(
+2
+)
+Efflorescence Resistant
+(2)
+Facet Value
+Masks Imperfections
+(
+2
+)
+Masks Imperfections
+(2)
+Facet Value
+Stain Locking Technology
+(
+2
+)
+Stain Locking Technology
+(2)
+Facet Value
+Excellent Adhesion
+(
+1
+)
+Excellent Adhesion
+(1)
+Facet Value
+Great Adhesion
+(
+1
+)
+Great Adhesion
+(1)
+Facet Value
+Interior/Exterior
+(
+1
+)
+Interior/Exterior
+(1)
+Facet Value
+Low Temp Application (>35° F)
+(
+1
+)
+Low Temp Application (>35° F)
+(1)
+Facet Value
+Mildew Resistant
+(
+1
+)
+Mildew Resistant
+(1)
+Facet Value
+Sealing Properties
+(
+1
+)
+Sealing Properties
+(1)
+Coating Type
+Coating Type
+Facet Value
+Latex (Water-Based)
+(
+11
+)
+Latex (Water-Based)
+(11)
+Facet Value
+Oil-Based
+(
+3
+)
+Oil-Based
+(3)
+Facet Value
+Styrene Acrylic
+(
+2
+)
+Styrene Acrylic
+(2)
+Facet Value
+Shellac
+(
+1
+)
+Shellac
+(1)
+Container Size
+Container Size
+Facet Value
+1 Gallon
+(
+18
+)
+1 Gallon
+(18)
+Facet Value
+5 Gallon
+(
+14
+)
+5 Gallon
+(14)
+Facet Value
+1 Quart
+(
+10
+)
+1 Quart
+(10)
+Facet Value
+12 oz
+(
+2
+)
+12 oz
+(2)
+Start Fresh with Interior Primers
+From masonry to trim to walls, a primer will help you start your project on the right foot. Choose from primers designed to block stains, resist moisture, improve adhesion on difficult surfaces and more. Find the right Sherwin-Williams primer for your next project and see all the difference it can make.
+Homeowners
+Sherwin-Williams
+Contact Us / Frequently Asked Questions
+Newsroom
+Investor Relations
+Careers
+Privacy Policy
+Accessibility Statement
+Terms and Conditions of Sale
+Terms of Use
+Forced Labor and Human Trafficking
+Do Not Sell or Share My Personal Information
+Other Sherwin-Williams Sites
+© 2025
+The Sherwin-Williams Company
+Sign up for PaintPerks®
+Get the latest inspiration on color and cutting edge design.
+PaintPerks® Terms & Conditions
+Register Now →
+Connect
+App Server Details
+generated on: Tue Sep 16 07:05:36 UTC 2025
+Host: tsapp-7f5f95897b-7fbgb
+Server Port: 443
+Local Port: 5443
+Instance: server1
+It took 1 milliseconds to generate this page.
