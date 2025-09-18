@@ -2,6 +2,7 @@
 AI-guided web crawler for product page discovery.
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -11,6 +12,7 @@ from urllib.parse import urlparse
 
 from .models import WebsiteNode, OpenSet, LinkInfo
 from .utils import extract_link_info, is_same_domain
+from .dynamic_loading import DynamicLoadingHandler
 
 # Try to import AI middleware, but make it optional for testing
 try:
@@ -69,6 +71,9 @@ class AIGuidedCrawler:
             "You are an architect. You want to find the product information from a supplier's website. "
             "You are clicking the button to go to the production description page."
         )
+
+        # Dynamic loading handler
+        self.dynamic_handler = DynamicLoadingHandler(self.domain, self.delay)
 
     def process_node(self, node: WebsiteNode) -> None:
         """
@@ -167,6 +172,73 @@ class AIGuidedCrawler:
             queued_count = sum(1 for score_data in scores if 1.0 <= score_data.get("score", 0.0) <= 9.0)
 
             self.logger.info(f"[PAGE_PROCESSING] Processing complete for {node.url}: {skipped_count} skipped, {product_count} products found, {queued_count} queued")
+
+            # Check for dynamic loading if we found products on this page
+            if product_count > 0:
+                self.logger.info(f"[PAGE_PROCESSING] Found {product_count} products on {node.url}, checking for dynamic loading...")
+                try:
+                    # Run dynamic loading check asynchronously
+                    additional_links = asyncio.run(
+                        self.dynamic_handler.check_and_exhaust_dynamic_loading(
+                            node.url, children_info, self.discovered_urls
+                        )
+                    )
+
+                    if additional_links:
+                        self.logger.info(f"[PAGE_PROCESSING] Found {len(additional_links)} additional links via dynamic loading")
+
+                        # Process additional links with AI scoring
+                        additional_instruction_prompt = self._build_instruction_prompt(additional_links)
+                        additional_output_structure_prompt = self._build_output_structure_prompt()
+
+                        additional_scores = self._get_ai_scores_with_retry(
+                            instruction_prompt=additional_instruction_prompt,
+                            output_structure_prompt=additional_output_structure_prompt,
+                            expected_count=len(additional_links)
+                        )
+
+                        # Process additional links
+                        for link_info in additional_links:
+                            # Find the corresponding score by ID
+                            score_data = None
+                            for score_item in additional_scores:
+                                if score_item.get("id") == link_info.id:
+                                    score_data = score_item
+                                    break
+
+                            if score_data is None and link_info.id < len(additional_scores):
+                                score_data = additional_scores[link_info.id]
+
+                            if score_data is None:
+                                score_data = {"id": link_info.id, "score": 0.0}
+
+                            score = score_data.get("score", 0.0)
+                            product_name = score_data.get("productName")
+
+                            # Create child node for additional link
+                            child_node = self._create_child_node(link_info, node, score, product_name)
+
+                            # Handle scoring results for additional links
+                            if score < 1.0:
+                                child_node.is_explored = True
+                                self.logger.debug(f"[PAGE_PROCESSING] DYNAMIC: SKIPPING '{link_info.title}' (score: {score} < 1.0)")
+                            elif score > 9.0:
+                                child_node.is_explored = True
+                                if product_name:
+                                    child_node.product_name = product_name
+                                    self.products.append({
+                                        "productName": product_name,
+                                        "url": link_info.url
+                                    })
+                                    self.logger.info(f"[PAGE_PROCESSING] DYNAMIC: ✓ PRODUCT FOUND: '{product_name}' at {link_info.url} (score: {score})")
+                                else:
+                                    self.logger.info(f"[PAGE_PROCESSING] DYNAMIC: ✓ HIGH SCORE but no product name: '{link_info.title}' (score: {score})")
+                            else:
+                                self.open_set.add(child_node)
+                                self.logger.debug(f"[PAGE_PROCESSING] DYNAMIC: QUEUED for exploration: '{link_info.title}' (score: {score})")
+
+                except Exception as e:
+                    self.logger.error(f"[PAGE_PROCESSING] Error in dynamic loading check for {node.url}: {e}")
 
         except Exception as e:
             self.logger.error(f"[PAGE_PROCESSING] Error processing node {node.url}: {e}")

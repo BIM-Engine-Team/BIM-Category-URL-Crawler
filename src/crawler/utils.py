@@ -254,6 +254,58 @@ def extract_link_info(url: str, session: Optional[requests.Session] = None, disc
         return []
 
 
+def extract_link_info_from_html(html_content: str, base_url: str, discovered_urls: Optional[set] = None, start_id: int = 0) -> List[LinkInfo]:
+    """
+    Extract link information from HTML content.
+
+    Args:
+        html_content: The HTML content to parse
+        base_url: The base URL for resolving relative URLs
+        discovered_urls: Optional set of already discovered URLs to avoid duplicates
+        start_id: Starting ID for link numbering
+
+    Returns:
+        List of LinkInfo objects
+    """
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        link_infos = []
+        link_id = start_id
+
+        # 1. Standard anchor tags with href attributes
+        for link_tag in soup.find_all('a', href=True):
+            href = link_tag['href'].strip()
+            if href and not href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                link_info = _create_link_info(href, link_tag, base_url, link_id, discovered_urls)
+                if link_info:
+                    link_infos.append(link_info)
+                    link_id += 1
+
+        # 2. Image map areas
+        for area_tag in soup.find_all('area', href=True):
+            href = area_tag['href'].strip()
+            if href and not href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                link_info = _create_link_info(href, area_tag, base_url, link_id, discovered_urls)
+                if link_info:
+                    link_infos.append(link_info)
+                    link_id += 1
+
+        # 3. Forms with action attributes
+        for form_tag in soup.find_all('form', action=True):
+            action = form_tag['action'].strip()
+            if action and not action.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                link_info = _create_link_info(action, form_tag, base_url, link_id, discovered_urls, element_type="form")
+                if link_info:
+                    link_infos.append(link_info)
+                    link_id += 1
+
+        return link_infos
+
+    except Exception as e:
+        logging.error(f"Error extracting links from HTML content: {e}")
+        return []
+
+
 def is_same_domain(url1: str, url2: str) -> bool:
     """Check if two URLs belong to the same domain."""
     try:
