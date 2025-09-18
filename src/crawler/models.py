@@ -15,6 +15,8 @@ class LinkInfo:
     title: str
     description: str
     id: int  # Index of the link for matching with AI scores
+    link_tag: str  # The HTML link tag content
+    link_text: str  # The visible text content of the link
 
 
 class WebsiteNode:
