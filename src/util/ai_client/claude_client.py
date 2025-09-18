@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import requests
 from typing import Optional
 from dotenv import load_dotenv
@@ -56,6 +57,15 @@ class ClaudeClient(BaseAIClient):
             "messages": messages
         }
 
+        logger = logging.getLogger(__name__)
+
+        # Log the request details
+        logger.info(f"[CLAUDE_CLIENT] Sending request to Claude API")
+        logger.info(f"[CLAUDE_CLIENT] Model: {model}, Max tokens: {max_tokens}")
+        logger.debug(f"[CLAUDE_CLIENT] System prompt: {system_prompt}")
+        logger.debug(f"[CLAUDE_CLIENT] User message: {messages[0]['content']}")
+        logger.debug(f"[CLAUDE_CLIENT] Full payload: {json.dumps(payload, indent=2)}")
+
         try:
             response = requests.post(
                 self.base_url,
@@ -64,22 +74,34 @@ class ClaudeClient(BaseAIClient):
                 timeout=60
             )
 
+            # Log the response status
+            logger.info(f"[CLAUDE_CLIENT] Received response with status: {response.status_code}")
+
             # Log the error details if request fails
             if not response.ok:
                 error_details = f"Status: {response.status_code}, Response: {response.text}"
-                print(f"Claude API Error Details: {error_details}")
-                print(f"Request payload: {json.dumps(payload, indent=2)}")
+                logger.error(f"[CLAUDE_CLIENT] API Error Details: {error_details}")
+                logger.debug(f"[CLAUDE_CLIENT] Request payload that failed: {json.dumps(payload, indent=2)}")
 
             response.raise_for_status()
 
             response_data = response.json()
-            return response_data["content"][0]["text"]
+            ai_response = response_data["content"][0]["text"]
+
+            # Log the successful response
+            logger.info(f"[CLAUDE_CLIENT] Successfully received Claude response (length: {len(ai_response)} chars)")
+            logger.debug(f"[CLAUDE_CLIENT] Claude response content: {ai_response}")
+
+            return ai_response
 
         except requests.exceptions.RequestException as e:
+            logger.error(f"[CLAUDE_CLIENT] API request failed: {str(e)}")
             raise Exception(f"API request failed: {str(e)}")
         except KeyError as e:
+            logger.error(f"[CLAUDE_CLIENT] Unexpected response format: {str(e)}")
             raise Exception(f"Unexpected response format: {str(e)}")
         except json.JSONDecodeError as e:
+            logger.error(f"[CLAUDE_CLIENT] Failed to parse JSON response: {str(e)}")
             raise Exception(f"Failed to parse JSON response: {str(e)}")
 
 

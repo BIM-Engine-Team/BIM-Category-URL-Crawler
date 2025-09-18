@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from .claude_client import ClaudeClient
@@ -74,19 +75,41 @@ class AIMiddleware:
         Raises:
             Exception: If the configured provider/model fails
         """
+        logger = logging.getLogger(__name__)
+
         # Use config values if not provided
         target_provider = provider or self._config.get("ai_provider", "anthropic")
         target_model = model or self._config.get("ai_model")
 
+        # Log the AI request details
+        logger.info(f"[AI_MIDDLEWARE] Sending prompt to provider: {target_provider}, model: {target_model}")
+        logger.debug(f"[AI_MIDDLEWARE] System prompt: {system_prompt}")
+        logger.debug(f"[AI_MIDDLEWARE] Instruction prompt: {instruction_prompt}")
+        if output_structure_prompt:
+            logger.debug(f"[AI_MIDDLEWARE] Output structure prompt: {output_structure_prompt}")
+        logger.debug(f"[AI_MIDDLEWARE] Max tokens: {max_tokens}")
+
         # Get the client and send the request - no fallback, fail fast
         client = self._get_client(target_provider)
-        return client.send_prompt(
-            system_prompt=system_prompt,
-            instruction_prompt=instruction_prompt,
-            output_structure_prompt=output_structure_prompt,
-            model=target_model,
-            max_tokens=max_tokens
-        )
+
+        try:
+            response = client.send_prompt(
+                system_prompt=system_prompt,
+                instruction_prompt=instruction_prompt,
+                output_structure_prompt=output_structure_prompt,
+                model=target_model,
+                max_tokens=max_tokens
+            )
+
+            # Log the AI response
+            logger.info(f"[AI_MIDDLEWARE] Received AI response (length: {len(response)} chars)")
+            logger.debug(f"[AI_MIDDLEWARE] AI Response: {response}")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"[AI_MIDDLEWARE] AI request failed: {str(e)}")
+            raise
 
 
 # Global middleware instance
@@ -124,8 +147,11 @@ def send_ai_prompt(
     Returns:
         String response from the AI service
     """
+    logger = logging.getLogger(__name__)
+    logger.info(f"[AI_PROMPT] Starting AI prompt request")
+
     middleware = get_ai_middleware()
-    return middleware.send_prompt(
+    result = middleware.send_prompt(
         system_prompt=system_prompt,
         instruction_prompt=instruction_prompt,
         output_structure_prompt=output_structure_prompt,
@@ -133,3 +159,6 @@ def send_ai_prompt(
         model=model,
         max_tokens=max_tokens
     )
+
+    logger.info(f"[AI_PROMPT] AI prompt request completed")
+    return result

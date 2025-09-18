@@ -2,11 +2,23 @@
 Data models for the website crawler.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, List
+import heapq
+from dataclasses import dataclass
+
+
+@dataclass
+class LinkInfo:
+    """Information about a link extracted from a page."""
+    url: str
+    relative_path: str
+    title: str
+    description: str
+    id: int  # Index of the link for matching with AI scores
 
 
 class WebsiteNode:
-    """Represents a node in the website tree structure."""
+    """Represents a node in the website tree structure with AI scoring."""
 
     def __init__(self, url: str, path: str = "", parent: Optional['WebsiteNode'] = None):
         self.url = url
@@ -15,6 +27,8 @@ class WebsiteNode:
         self.children: Dict[str, 'WebsiteNode'] = {}  # path -> node
         self.is_explored = False
         self.depth = 0 if parent is None else parent.depth + 1
+        self.score: float = 0.0  # AI score for this node
+        self.product_name: Optional[str] = None  # Set if this is a product page
 
     @property
     def total_children(self) -> int:
@@ -52,3 +66,49 @@ class WebsiteNode:
             lines.extend(child.get_tree_display(child_prefix, child_is_last).split('\n'))
 
         return '\n'.join(lines)
+
+    def get_average_score(self) -> float:
+        """Calculate average score of this node and all ancestors."""
+        scores = []
+        current = self
+        while current is not None:
+            if current.score > 0:  # Only count nodes that have been scored
+                scores.append(current.score)
+            current = current.parent
+
+        return sum(scores) / len(scores) if scores else 0.0
+
+
+class OpenSet:
+    """Max binary heap for prioritizing nodes to explore based on average scores."""
+
+    def __init__(self):
+        self._heap: List[tuple] = []  # (negative_avg_score, counter, node)
+        self._counter = 0  # To ensure stable sorting for equal scores
+        self._node_set = set()  # To track which nodes are in the heap
+
+    def add(self, node: WebsiteNode):
+        """Add a node to the open set."""
+        if node not in self._node_set:
+            # Use negative score for max heap behavior (Python heapq is min heap)
+            avg_score = node.get_average_score()
+            heapq.heappush(self._heap, (-avg_score, self._counter, node))
+            self._counter += 1
+            self._node_set.add(node)
+
+    def pop(self) -> Optional[WebsiteNode]:
+        """Remove and return the node with highest average score."""
+        while self._heap:
+            neg_score, counter, node = heapq.heappop(self._heap)
+            if node in self._node_set:
+                self._node_set.remove(node)
+                return node
+        return None
+
+    def is_empty(self) -> bool:
+        """Check if the open set is empty."""
+        return len(self._node_set) == 0
+
+    def size(self) -> int:
+        """Get the number of nodes in the open set."""
+        return len(self._node_set)

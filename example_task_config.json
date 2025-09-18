@@ -1,0 +1,6 @@
+{
+  "url": "https://www.sherwin-williams.com",
+  "delay": 1.5,
+  "max_pages": 100,
+  "output": "sherwin_williams_products.json"
+}
