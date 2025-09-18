@@ -3,10 +3,11 @@ import json
 import requests
 from typing import Optional
 from dotenv import load_dotenv
+from .base_client import BaseAIClient
 
 load_dotenv()
 
-class ClaudeClient:
+class ClaudeClient(BaseAIClient):
     def __init__(self):
         self.api_key = os.getenv('CLAUDE_API_KEY')
         if not self.api_key:
@@ -62,6 +63,13 @@ class ClaudeClient:
                 json=payload,
                 timeout=60
             )
+
+            # Log the error details if request fails
+            if not response.ok:
+                error_details = f"Status: {response.status_code}, Response: {response.text}"
+                print(f"Claude API Error Details: {error_details}")
+                print(f"Request payload: {json.dumps(payload, indent=2)}")
+
             response.raise_for_status()
 
             response_data = response.json()

@@ -8,11 +8,11 @@ a json like this:
 ```
 [
     {
-        "production name": "Extreme Block Interior/Exterior Stain Blocking Waterbased Primer"
+        "productName": "Extreme Block Interior/Exterior Stain Blocking Waterbased Primer"
         "url": "https...."
     },
     {
-        "production name": "Purdy Revolution 9" Frame"
+        "productName": "Purdy Revolution 9" Frame"
         "url": "https...."
     },
 
@@ -23,47 +23,22 @@ How it's gonna work:
 
 - The crawler will still host the tree as a map. But this time we don't use the breadth-first searching. We use ai to score nodes to decide which to explore next.
 
-node state:
-
-- Unexplored,
-  - default
-- Explored,
-  - for nodes which have be processed with the ProcessNode() method but not marked as CompletelyExplored
-- CompletelyExplored
-  - for nodes that were scored less than 1 or are the project description page
-  - for nodes don't have children
-  - for nodes all children of whom are marked CompletelyExplored
-  - check and update the parent node's state whenever there is a node marked as CompletelyExplored
-
-how do we decide which node to explore next?
-
-- we compare all nodes that are not Unexplored and take the one with highest score (regardless of its depth).
-
 how do we process a node?
 
-```pseudo
+````pseudo
 function ProcessNode(node):
     // Explore this node
-    visit the page
-    nodeInfo = its title, description and relative path (relative to its direct parent)
-    ask ai:
-        instruction_prompt (you can refine it for me) = '''According to the following information.Do you think this page is a description page of a specific product? If yes, answer with ONLY the production name; if no, answer exactly "No".
-        [Show the nodeInfo]
-        '''
-
-    if yes, add this to the final output, increase the score of its brother nodes by 10%. mark this node as CompletelyExplored. return. explore the next node
-    if no, score its children.
+    mark this node as Explored
 
     // Score Children
-    children = get children links from the node
+    children = get children links from the page of the node
     foreach children
-    get their title
+        childrenInfo.add( get their title, description and relative path)
 
-    childrenInfo = [child1's relative path (relative to its direct parent) & its title, child2's relative path & its title, ...]
-
-
-    instruction_prompt to ai (you can refine it for me) = """This is a list of link's path and title on the current page.
-    Score them from 0 - 10 according to how likely it will lead you to the product description page. a score less than 1 is for links you will never click.
+    instruction_prompt to ai (you can refine it for me) = """You come to a page with a list of links. Here is the relative path, title and description of each link.
+    Score them from 0 - 10 according to how likely the link will lead you to the product description page.
+    A score less than 1 is for links you will never click.
+    A score higher than 9 is for links you think is very likely to be the product description page of a specific product. For these kind of link, you will also tell the product name.
 
     [Show the childrenInfo here]
     """
@@ -72,14 +47,28 @@ function ProcessNode(node):
     [
         {"score": 3.4},
         {"score": 7.8},
+        {"score": 9.5, "productName": "Emerald Urethane Trim Enamel"} // provide product name when score is larger than 9
         ...
     ]"""
 
-    get the answer from the ai and set the score of each children. mark CompletelyExplored to children less than 1.
-    mark this node as Explored.
-    explore the next node
+    get the answer from the ai and set the score of each children to their tree node.
+    mark Explored to children less than 1 and larger than 9.
+    add the rest of the children to the openSet
+    add the productName, url for children higher than 9 to the final output
+    return to explore the next node
 
 ```
 
-We use this system prompt for all request to ai for this plan (you can refine it for me):
-"You are an architect. You want to find the product information from a supplier's website. You are clicking the button to go to the production description page."
+The openSet
+
+- implement it as a max binary heap
+- the element's value for sorting is the average score of the node and all its ancestors. For example, for node3 : root - node1 - node2 - node3, its value for sorting in the open set is (score1 + score2 + score3)/3
+
+how do we decide which node to explore next?
+    - The element with max value in the open set;
+
+NOTES:
+1. We use this system prompt for all request to ai for this plan (you can refine it for me):
+    "You are an architect. You want to find the product information from a supplier's website. You are clicking the button to go to the production description page."
+2.
+````
