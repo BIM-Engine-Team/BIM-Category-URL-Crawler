@@ -8,7 +8,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from typing import List, Optional
-from .models import LinkInfo
+from .models import LinkInfo, DynamicElementInfo
 
 
 def setup_logging(level: int = logging.INFO) -> logging.Logger:
@@ -390,3 +390,117 @@ def extract_page_content(url: str, session: Optional[requests.Session] = None) -
             "text_content": "",
             "url": url
         }
+
+
+def extract_dynamic_elements(url: str, session: Optional[requests.Session] = None) -> List[DynamicElementInfo]:
+    """
+    Extract potentially dynamic elements from a page for AI analysis using requests.
+
+    This function focuses on interactive elements that might trigger dynamic loading,
+    such as buttons, clickable divs, and other elements with event handlers.
+    Uses requests for fast initial extraction, Playwright is used later for actual interaction.
+
+    Args:
+        url: The URL to extract elements from
+        session: Optional requests session for connection reuse
+
+    Returns:
+        List of DynamicElementInfo objects containing element metadata for AI analysis
+    """
+    if session is None:
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+
+    try:
+        response = session.get(url, timeout=10)
+        response.raise_for_status()
+        return extract_dynamic_elements_from_html(response.text, url)
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error extracting dynamic elements from {url}: {e}")
+        return []
+
+
+def extract_dynamic_elements_from_html(html_content: str, base_url: str) -> List[DynamicElementInfo]:
+    """
+    Extract potentially dynamic elements from HTML content using BeautifulSoup.
+
+    Args:
+        html_content: The HTML content to parse
+        base_url: The base URL for context
+
+    Returns:
+        List of DynamicElementInfo objects
+    """
+    soup = BeautifulSoup(html_content, 'html.parser')
+    dynamic_elements = []
+    element_id = 0
+
+    # Define selectors for potentially dynamic elements
+    selectors = [
+        'button',  # Buttons
+        '[onclick]',  # Elements with onclick handlers
+        '[class*="next"]',  # Elements with "next" in class name
+        '[class*="more"]',  # Elements with "more" in class name
+        '[class*="load"]',  # Elements with "load" in class name
+        '[class*="page"]',  # Elements with "page" in class name
+        '[class*="tab"]',   # Tab elements
+        '[class*="expand"]', # Expandable elements
+        '[class*="accordion"]', # Accordion elements
+        '[class*="pagination"]', # Pagination elements
+        '[role="button"]',  # ARIA button role
+        '[role="tab"]',     # ARIA tab role
+        'div[class*="button"]',  # Div elements styled as buttons
+        'span[class*="button"]', # Span elements styled as buttons
+        'a[href="#"]',      # Links with hash href (likely JS handlers)
+        'a[href="javascript:"]', # JavaScript links
+    ]
+
+    # Collect all matching elements (deduplicated)
+    found_elements = set()
+    for selector in selectors:
+        try:
+            elements = soup.select(selector)
+            for element in elements:
+                if element not in found_elements:
+                    found_elements.add(element)
+
+                    # Extract element information
+                    text_content = element.get_text(strip=True)[:100]  # Limit to 100 chars
+                    class_names = ' '.join(element.get('class', []))
+                    element_html_id = element.get('id', '')
+                    onclick_handler = bool(element.get('onclick'))
+
+                    # Check if element has clickable children
+                    has_children = bool(element.find_all(['button', 'a', '[onclick]'], recursive=True))
+
+                    # Get parent tag for context
+                    parent_tag = element.parent.name if element.parent else ''
+
+                    # Get ARIA label
+                    aria_label = element.get('aria-label', '') or element.get('title', '')
+
+                    # Skip if no meaningful content and no identifying attributes
+                    if not text_content and not class_names and not element_html_id and not onclick_handler and not aria_label:
+                        continue
+
+                    dynamic_element = DynamicElementInfo(
+                        id=element_id,
+                        tag_name=element.name,
+                        text_content=text_content,
+                        class_names=class_names,
+                        element_id=element_html_id,
+                        onclick_handler=onclick_handler,
+                        has_children=has_children,
+                        parent_tag=parent_tag,
+                        aria_label=aria_label
+                    )
+
+                    dynamic_elements.append(dynamic_element)
+                    element_id += 1
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Error processing selector '{selector}': {e}")
+            continue
+
+    return dynamic_elements

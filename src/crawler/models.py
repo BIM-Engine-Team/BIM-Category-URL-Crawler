@@ -19,6 +19,20 @@ class LinkInfo:
     link_text: str  # The visible text content of the link
 
 
+@dataclass
+class DynamicElementInfo:
+    """Information about a potentially dynamic element extracted from a page."""
+    id: int  # Index of the element for matching with AI scores
+    tag_name: str  # HTML tag name (button, div, span, etc.)
+    text_content: str  # Visible text content (truncated to avoid long text)
+    class_names: str  # CSS class names
+    element_id: str  # HTML id attribute
+    onclick_handler: bool  # Whether element has click handler
+    has_children: bool  # Whether element has clickable children
+    parent_tag: str  # Parent element tag name for context
+    aria_label: str  # ARIA label if present
+
+
 class WebsiteNode:
     """Represents a node in the website tree structure with AI scoring."""
 

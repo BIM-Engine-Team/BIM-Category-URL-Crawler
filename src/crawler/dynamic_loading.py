@@ -9,8 +9,8 @@ from typing import List, Dict, Any, Optional, Set
 from playwright.async_api import async_playwright, Page, Browser
 from urllib.parse import urljoin
 
-from .models import LinkInfo
-from .utils import is_same_domain, extract_link_info_from_html
+from .models import LinkInfo, DynamicElementInfo
+from .utils import is_same_domain, extract_link_info_from_html, extract_dynamic_elements
 
 
 class DynamicLoadingHandler:
@@ -31,7 +31,6 @@ class DynamicLoadingHandler:
     async def check_and_exhaust_dynamic_loading(
         self,
         url: str,
-        children_info: List[LinkInfo],
         discovered_urls: Set[str]
     ) -> List[LinkInfo]:
         """
@@ -39,7 +38,6 @@ class DynamicLoadingHandler:
 
         Args:
             url: The page URL to check
-            children_info: List of already discovered child links
             discovered_urls: Set of already discovered URLs to avoid duplicates
 
         Returns:
@@ -47,18 +45,21 @@ class DynamicLoadingHandler:
         """
         self.logger.info(f"[DYNAMIC_LOADING] Checking dynamic loading for {url}")
 
-        # Filter children info to only include relevant fields for AI analysis
-        pruned_children = []
-        for link_info in children_info:
-            pruned_children.append({
-                "id": link_info.id,
-                "relative_path": link_info.relative_path,
-                "link_tag": link_info.link_tag,
-                "link_text": link_info.link_text
+        # Extract dynamic elements separately from links using requests (fast)
+        try:
+            import requests
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             })
+            dynamic_element_candidates = extract_dynamic_elements(url, session)
+            self.logger.info(f"[DYNAMIC_LOADING] Found {len(dynamic_element_candidates)} potential dynamic elements")
+        except Exception as e:
+            self.logger.error(f"[DYNAMIC_LOADING] Error extracting dynamic elements: {e}")
+            dynamic_element_candidates = []
 
-        # Check with AI if there's dynamic loading
-        dynamic_elements = await self._check_with_ai(pruned_children)
+        # Check with AI if there's dynamic loading among these candidates
+        dynamic_elements = await self._check_with_ai(dynamic_element_candidates)
 
         additional_links = []
 
@@ -80,7 +81,7 @@ class DynamicLoadingHandler:
                         if element_id != -1 and trigger_type:
                             self.logger.info(f"[DYNAMIC_LOADING] Processing {trigger_type} for element ID {element_id}")
                             element_links = await self._exhaust_dynamic_element(
-                                page, element_id, trigger_type, children_info, url, discovered_urls
+                                page, element_id, trigger_type, dynamic_element_candidates, url, discovered_urls
                             )
                             additional_links.extend(element_links)
 
@@ -96,12 +97,12 @@ class DynamicLoadingHandler:
         self.logger.info(f"[DYNAMIC_LOADING] Found {len(additional_links)} additional links from dynamic loading")
         return additional_links
 
-    async def _check_with_ai(self, pruned_children: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def _check_with_ai(self, dynamic_element_candidates: List[DynamicElementInfo]) -> List[Dict[str, Any]]:
         """
         Use AI to determine if the page has dynamic loading elements.
 
         Args:
-            pruned_children: List of pruned link information for AI analysis
+            dynamic_element_candidates: List of potential dynamic elements for AI analysis
 
         Returns:
             List of dynamic loading elements with their trigger types
@@ -118,10 +119,32 @@ class DynamicLoadingHandler:
                 "You are clicking the button to go to the production description page."
             )
 
-            instruction_prompt = f"""On this page, you found multiple links to product description pages. According to the UI elements on this page, do you think the page uses dynamic loading? If yes, output the elements' id and tell their trigger type (select one from: Pagination, Load More, Tabs, Accordions, Expanders), if no, you answer with "[]" only.
+            # Convert dynamic element candidates to AI-friendly format
+            elements_for_ai = []
+            for elem in dynamic_element_candidates:
+                elements_for_ai.append({
+                    "id": elem.id,
+                    "tag": elem.tag_name,
+                    "text": elem.text_content,
+                    "classes": elem.class_names,
+                    "element_id": elem.element_id,
+                    "onclick": elem.onclick_handler,
+                    "parent": elem.parent_tag,
+                    "aria_label": elem.aria_label
+                })
 
-Here is the list of elements:
-{pruned_children}"""
+            instruction_prompt = f"""On this page, you found potential interactive elements that might trigger dynamic loading of additional content (like more products). Analyze these UI elements and determine if any of them are dynamic loading triggers.
+
+If you find dynamic loading elements, output their ID and trigger type. If no dynamic loading is detected, return "[]" only.
+
+Here is the list of interactive elements found on the page:
+{elements_for_ai}
+
+Look for elements that might:
+- Load more products/items (buttons with text like "Load More", "Show More", "View More")
+- Navigate between pages (pagination buttons, "Next", "Previous")
+- Switch between different content sections (tabs, accordions)
+- Expand content sections (expandable areas, "Show Details")"""
 
             output_structure_prompt = """Please format your response as JSON with the following structure:
 [
@@ -178,7 +201,7 @@ IMPORTANT:
         page: Page,
         element_id: int,
         trigger_type: str,
-        children_info: List[LinkInfo],
+        dynamic_element_candidates: List[DynamicElementInfo],
         base_url: str,
         discovered_urls: Set[str]
     ) -> List[LinkInfo]:
@@ -189,7 +212,7 @@ IMPORTANT:
             page: Playwright page object
             element_id: ID of the element to interact with
             trigger_type: Type of dynamic loading (Pagination, Load More, etc.)
-            children_info: Original children info to find the target element
+            dynamic_element_candidates: List of dynamic element candidates to find the target element
             base_url: Base URL for resolving relative links
             discovered_urls: Set of already discovered URLs
 
@@ -199,15 +222,15 @@ IMPORTANT:
         additional_links = []
 
         try:
-            # Find the target element from children_info
+            # Find the target element from dynamic_element_candidates
             target_element = None
-            for link_info in children_info:
-                if link_info.id == element_id:
-                    target_element = link_info
+            for elem in dynamic_element_candidates:
+                if elem.id == element_id:
+                    target_element = elem
                     break
 
             if not target_element:
-                self.logger.warning(f"[DYNAMIC_LOADING] Element with ID {element_id} not found in children_info")
+                self.logger.warning(f"[DYNAMIC_LOADING] Element with ID {element_id} not found in dynamic element candidates")
                 return additional_links
 
             if trigger_type == "Pagination":
@@ -226,44 +249,52 @@ IMPORTANT:
 
         return additional_links
 
-    async def _find_element_by_target(self, page: Page, target_element: LinkInfo):
+    async def _find_element_by_target(self, page: Page, target_element: DynamicElementInfo):
         """
         Find the actual DOM element using the target_element information.
 
         Args:
             page: Playwright page object
-            target_element: LinkInfo object containing element details
+            target_element: DynamicElementInfo object containing element details
 
         Returns:
             Playwright element handle or None
         """
         try:
-            # Try to find by link text first
-            if target_element.link_text:
-                element = await page.query_selector(f"text='{target_element.link_text}'")
+            # Try to find by HTML id first (most reliable)
+            if target_element.element_id:
+                element = await page.query_selector(f"#{target_element.element_id}")
                 if element:
                     return element
 
-            # Try to find by href
-            if target_element.relative_path:
-                element = await page.query_selector(f"a[href*='{target_element.relative_path}']")
+            # Try to find by text content
+            if target_element.text_content:
+                # Use contains for partial text match
+                element = await page.query_selector(f"{target_element.tag_name}:has-text('{target_element.text_content}')")
                 if element:
                     return element
 
-            # Try to find by partial href
-            href_parts = target_element.relative_path.split('/')
-            for part in href_parts:
-                if part and len(part) > 3:  # Only use meaningful parts
-                    element = await page.query_selector(f"a[href*='{part}']")
+            # Try to find by class names
+            if target_element.class_names:
+                # Use the first class name as a fallback
+                first_class = target_element.class_names.split()[0] if target_element.class_names.split() else ""
+                if first_class:
+                    element = await page.query_selector(f"{target_element.tag_name}.{first_class}")
                     if element:
                         return element
+
+            # For aria-label
+            if target_element.aria_label:
+                element = await page.query_selector(f"[aria-label='{target_element.aria_label}']")
+                if element:
+                    return element
 
         except Exception as e:
             self.logger.debug(f"[DYNAMIC_LOADING] Error finding element: {e}")
 
         return None
 
-    async def _handle_pagination(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
+    async def _handle_pagination(self, page: Page, target_element: DynamicElementInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle pagination dynamic loading using the target element."""
         additional_links = []
 
@@ -346,7 +377,7 @@ IMPORTANT:
             self.logger.debug(f"[DYNAMIC_LOADING] Pagination content wait timeout: {e}")
             # Continue anyway - some content might have loaded
 
-    async def _handle_load_more(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
+    async def _handle_load_more(self, page: Page, target_element: DynamicElementInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle 'Load More' dynamic loading using the target element."""
         additional_links = []
 
@@ -433,7 +464,7 @@ IMPORTANT:
             self.logger.debug(f"[DYNAMIC_LOADING] Load more content wait timeout: {e}")
             # Continue anyway - some content might have loaded
 
-    async def _handle_tabs(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
+    async def _handle_tabs(self, page: Page, target_element: DynamicElementInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle tabs dynamic loading using the target element."""
         additional_links = []
 
@@ -496,7 +527,7 @@ IMPORTANT:
             self.logger.debug(f"[DYNAMIC_LOADING] Tab content wait timeout: {e}")
             # Continue anyway - tab might have loaded
 
-    async def _handle_accordions(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
+    async def _handle_accordions(self, page: Page, target_element: DynamicElementInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle accordion dynamic loading using the target element."""
         additional_links = []
 
@@ -526,7 +557,7 @@ IMPORTANT:
 
         return additional_links
 
-    async def _handle_expanders(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
+    async def _handle_expanders(self, page: Page, target_element: DynamicElementInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle expander dynamic loading using the target element."""
         additional_links = []
 

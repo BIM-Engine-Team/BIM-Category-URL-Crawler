@@ -122,7 +122,7 @@ class AIGuidedCrawler:
         try:
             additional_links = asyncio.run(
                 self.dynamic_handler.check_and_exhaust_dynamic_loading(
-                    node.url, pruned_children_info, self.discovered_urls  # Use empty set to avoid updating discovered_urls here
+                    node.url, self.discovered_urls  # Use empty set to avoid updating discovered_urls here
                 )
             )
 
