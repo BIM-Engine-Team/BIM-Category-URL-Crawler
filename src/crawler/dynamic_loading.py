@@ -155,6 +155,8 @@ IMPORTANT:
                     json_str = json_str.strip()
                     if json_str:
                         dynamic_elements = json.loads(json_str)
+                        # Log the parsed dynamic loading result
+                        self.logger.info(f"[DYNAMIC_LOADING_AI] Parsed JSON: {json.dumps(dynamic_elements)}")
                         # Filter out non-dynamic elements
                         return [elem for elem in dynamic_elements]
                     else:

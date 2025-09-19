@@ -314,3 +314,83 @@ def is_same_domain(url1: str, url2: str) -> bool:
         return domain1 == domain2 or domain1 == '' or domain2 == ''
     except Exception:
         return False
+
+
+def extract_page_content(url: str, session: Optional[requests.Session] = None) -> dict:
+    """
+    Extract title, description, and text content from a webpage for AI analysis.
+
+    Args:
+        url: The URL to extract content from
+        session: Optional requests session for connection reuse
+
+    Returns:
+        Dictionary containing title, description, and text content
+    """
+    if session is None:
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+
+    try:
+        response = session.get(url, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Extract title
+        title = ""
+        title_tag = soup.find('title')
+        if title_tag:
+            title = title_tag.get_text(strip=True)
+
+        # Extract meta description
+        description = ""
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        if meta_desc:
+            description = meta_desc.get('content', '').strip()
+
+        # If no meta description, try to get from other sources
+        if not description:
+            # Try h1 tag
+            h1_tag = soup.find('h1')
+            if h1_tag:
+                description = h1_tag.get_text(strip=True)
+            # Try first paragraph
+            elif soup.find('p'):
+                first_p = soup.find('p')
+                description = first_p.get_text(strip=True)[:200]
+
+        # Extract main text content
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()
+
+        # Get text content
+        text_content = soup.get_text()
+
+        # Clean up text content
+        lines = (line.strip() for line in text_content.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text_content = ' '.join(chunk for chunk in chunks if chunk)
+
+        # Limit text content to reasonable size for AI processing
+        if len(text_content) > 3000:
+            text_content = text_content[:3000] + "..."
+
+        return {
+            "title": title,
+            "description": description,
+            "text_content": text_content,
+            "url": url
+        }
+
+    except Exception as e:
+        logging.error(f"Error extracting content from {url}: {e}")
+        return {
+            "title": "",
+            "description": "",
+            "text_content": "",
+            "url": url
+        }
