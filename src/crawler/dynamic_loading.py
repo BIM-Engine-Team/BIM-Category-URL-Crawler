@@ -67,7 +67,8 @@ class DynamicLoadingHandler:
             page = await browser.new_page()
 
             try:
-                await page.goto(url, wait_until="networkidle", timeout=30000)
+                # Use domcontentloaded for faster initial load, then wait for specific content
+                await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                 await asyncio.sleep(self.delay)
 
                 # Handle AI-detected dynamic loading elements
@@ -117,7 +118,7 @@ class DynamicLoadingHandler:
                 "You are clicking the button to go to the production description page."
             )
 
-            instruction_prompt = f"""On this page, you found multiple links to product description pages. According to the UI elements on this page, do you think the page uses dynamic loading? If yes, output the element's id and tell its trigger type (select one from: Pagination, Load More, Tabs, Accordions, Expanders), if no, you answer with {{"id": -1}}.
+            instruction_prompt = f"""On this page, you found multiple links to product description pages. According to the UI elements on this page, do you think the page uses dynamic loading? If yes, output the elements' id and tell their trigger type (select one from: Pagination, Load More, Tabs, Accordions, Expanders), if no, you answer with "[]" only.
 
 Here is the list of elements:
 {pruned_children}"""
@@ -125,12 +126,11 @@ Here is the list of elements:
             output_structure_prompt = """Please format your response as JSON with the following structure:
 [
     {"id": 3, "triggerType": "Pagination"},
-    {"id": 7, "triggerType": "Load More"},
-    {"id": -1}
+    {"id": 7, "triggerType": "Load More"}
 ]
 
 IMPORTANT:
-- If no dynamic loading is detected, return [{"id": -1}]
+- If no dynamic loading is detected, return []
 - If dynamic loading is found, provide the element ID and trigger type
 - Valid trigger types are: Pagination, Load More, Tabs, Accordions, Expanders"""
 
@@ -156,7 +156,7 @@ IMPORTANT:
                     if json_str:
                         dynamic_elements = json.loads(json_str)
                         # Filter out non-dynamic elements
-                        return [elem for elem in dynamic_elements if elem.get("id", -1) != -1]
+                        return [elem for elem in dynamic_elements]
                     else:
                         self.logger.warning(f"[DYNAMIC_LOADING] Empty JSON string extracted from AI response")
                 else:
@@ -275,8 +275,14 @@ IMPORTANT:
             while page_count < max_pages and current_element:
                 # Click the pagination element
                 if await current_element.is_visible():
+                    # Get initial content count for comparison
+                    initial_links = await page.query_selector_all('a[href]')
+                    initial_count = len(initial_links)
+
                     await current_element.click()
-                    await page.wait_for_load_state("networkidle", timeout=10000)
+
+                    # Wait for new content to load using multiple strategies
+                    await self._wait_for_pagination_content(page, initial_count)
                     await asyncio.sleep(self.delay)
 
                     # Extract new links from the updated page
@@ -307,6 +313,38 @@ IMPORTANT:
 
         return additional_links
 
+    async def _wait_for_pagination_content(self, page: Page, initial_count: int):
+        """Wait for pagination content to load using multiple strategies."""
+        timeout = 10000
+        strategies = [
+            # Common pagination content selectors
+            '.pagination-content, .page-content, .results, .product-list, .item-list',
+            # Loading indicators that should disappear
+            '.loading, .spinner, [data-loading="true"]',
+            # Generic content containers
+            '.content, .main-content, .products, .items',
+        ]
+
+        try:
+            # Strategy 1: Wait for content containers
+            for selector in strategies:
+                try:
+                    await page.wait_for_selector(selector, timeout=timeout//len(strategies))
+                    break
+                except:
+                    continue
+
+            # Strategy 2: Wait for link count to change
+            for _ in range(20):  # Check for 2 seconds
+                current_links = await page.query_selector_all('a[href]')
+                if len(current_links) > initial_count:
+                    break
+                await asyncio.sleep(0.1)
+
+        except Exception as e:
+            self.logger.debug(f"[DYNAMIC_LOADING] Pagination content wait timeout: {e}")
+            # Continue anyway - some content might have loaded
+
     async def _handle_load_more(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle 'Load More' dynamic loading using the target element."""
         additional_links = []
@@ -318,8 +356,14 @@ IMPORTANT:
 
             while click_count < max_clicks and current_element:
                 if await current_element.is_visible():
+                    # Get initial content state for comparison
+                    initial_links = await page.query_selector_all('a[href]')
+                    initial_count = len(initial_links)
+
                     await current_element.click()
-                    await page.wait_for_timeout(2000)  # Wait for content to load
+
+                    # Wait for new content to load using load-more specific strategies
+                    await self._wait_for_load_more_content(page, initial_count)
                     await asyncio.sleep(self.delay)
 
                     # Extract new links
@@ -350,6 +394,45 @@ IMPORTANT:
 
         return additional_links
 
+    async def _wait_for_load_more_content(self, page: Page, initial_count: int):
+        """Wait for load more content to appear using multiple strategies."""
+        timeout = 15000
+        strategies = [
+            # Load more specific selectors
+            '.loaded-content, .new-items, [data-loaded="true"], .lazy-loaded',
+            # Loading indicators that should appear then disappear
+            '.loading:not([style*="display: none"]), .spinner:visible, [data-loading="true"]',
+            # Common content containers that get populated
+            '.product-grid, .item-container, .results-list, .content-list',
+        ]
+
+        try:
+            # Strategy 1: Wait for loading indicators to appear then disappear
+            try:
+                await page.wait_for_selector('.loading, .spinner, [data-loading="true"]', timeout=2000)
+                await page.wait_for_selector('.loading:not([style*="display: block"]), .spinner:not([style*="display: block"])', timeout=timeout-2000)
+            except:
+                pass
+
+            # Strategy 2: Wait for content containers
+            for selector in strategies:
+                try:
+                    await page.wait_for_selector(selector, timeout=timeout//len(strategies))
+                    break
+                except:
+                    continue
+
+            # Strategy 3: Wait for link count to increase
+            for _ in range(30):  # Check for 3 seconds
+                current_links = await page.query_selector_all('a[href]')
+                if len(current_links) > initial_count:
+                    break
+                await asyncio.sleep(0.1)
+
+        except Exception as e:
+            self.logger.debug(f"[DYNAMIC_LOADING] Load more content wait timeout: {e}")
+            # Continue anyway - some content might have loaded
+
     async def _handle_tabs(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle tabs dynamic loading using the target element."""
         additional_links = []
@@ -360,7 +443,9 @@ IMPORTANT:
 
             if tab_element and await tab_element.is_visible():
                 await tab_element.click()
-                await page.wait_for_timeout(1000)
+
+                # Wait for tab content to load using tab-specific strategies
+                await self._wait_for_tab_content(page)
                 await asyncio.sleep(self.delay)
 
                 # Extract links from tab content
@@ -379,6 +464,39 @@ IMPORTANT:
 
         return additional_links
 
+    async def _wait_for_tab_content(self, page: Page):
+        """Wait for tab content to become visible using multiple strategies."""
+        timeout = 8000
+        strategies = [
+            # Active tab content selectors
+            '.tab-content.active, .tab-pane.active, [aria-hidden="false"]',
+            # Tab content by display style
+            '.tab-content[style*="display: block"], .tab-pane[style*="display: block"]',
+            # Generic visible content
+            '.tab-content:not([style*="display: none"]), .tab-pane:not([style*="display: none"])',
+        ]
+
+        try:
+            # Strategy 1: Wait for active tab content
+            for selector in strategies:
+                try:
+                    await page.wait_for_selector(selector, timeout=timeout//len(strategies))
+                    # Additional wait to ensure content is fully loaded
+                    await page.wait_for_function(
+                        f'document.querySelector("{selector}") && document.querySelector("{selector}").offsetHeight > 0',
+                        timeout=2000
+                    )
+                    return
+                except:
+                    continue
+
+            # Strategy 2: Wait for any content change (fallback)
+            await page.wait_for_timeout(1000)
+
+        except Exception as e:
+            self.logger.debug(f"[DYNAMIC_LOADING] Tab content wait timeout: {e}")
+            # Continue anyway - tab might have loaded
+
     async def _handle_accordions(self, page: Page, target_element: LinkInfo, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Handle accordion dynamic loading using the target element."""
         additional_links = []
@@ -389,7 +507,9 @@ IMPORTANT:
 
             if accordion_element and await accordion_element.is_visible():
                 await accordion_element.click()
-                await page.wait_for_timeout(1000)
+
+                # Wait for accordion content to expand using accordion-specific strategies
+                await self._wait_for_accordion_content(page)
                 await asyncio.sleep(self.delay)
 
                 # Extract links from expanded content
@@ -418,7 +538,9 @@ IMPORTANT:
 
             if expander_element and await expander_element.is_visible():
                 await expander_element.click()
-                await page.wait_for_timeout(1000)
+
+                # Wait for expander content using same strategy as accordions
+                await self._wait_for_accordion_content(page)
                 await asyncio.sleep(self.delay)
 
                 # Extract links from expanded content
@@ -436,6 +558,39 @@ IMPORTANT:
             self.logger.error(f"[DYNAMIC_LOADING] Expander handling error: {e}")
 
         return additional_links
+
+    async def _wait_for_accordion_content(self, page: Page):
+        """Wait for accordion/expander content to expand using multiple strategies."""
+        timeout = 6000
+        strategies = [
+            # Expanded state selectors
+            '[aria-expanded="true"], .expanded, .open, .accordion-open',
+            # Content visibility selectors
+            '.accordion-content:not([style*="display: none"]), .expand-content[style*="display: block"]',
+            # Height-based selectors (accordions often animate height)
+            '.accordion-body[style*="height"], .collapsible-content[style*="max-height"]',
+        ]
+
+        try:
+            # Strategy 1: Wait for expanded state indicators
+            for selector in strategies:
+                try:
+                    await page.wait_for_selector(selector, timeout=timeout//len(strategies))
+                    # Wait for animation to complete
+                    await page.wait_for_function(
+                        f'document.querySelector("{selector}") && document.querySelector("{selector}").offsetHeight > 20',
+                        timeout=2000
+                    )
+                    return
+                except:
+                    continue
+
+            # Strategy 2: Generic timeout fallback
+            await page.wait_for_timeout(1000)
+
+        except Exception as e:
+            self.logger.debug(f"[DYNAMIC_LOADING] Accordion content wait timeout: {e}")
+            # Continue anyway - content might have expanded
 
     async def _check_infinite_scroll(self, page: Page, base_url: str, discovered_urls: Set[str]) -> List[LinkInfo]:
         """Check for infinite scroll and exhaust content."""

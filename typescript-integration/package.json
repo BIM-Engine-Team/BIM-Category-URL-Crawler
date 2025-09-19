@@ -1,0 +1,41 @@
+{
+  "name": "ai-product-category-crawler",
+  "version": "1.0.0",
+  "description": "TypeScript wrapper for AI-guided web crawler",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "npm run build",
+    "test": "jest",
+    "install-python-deps": "pip install ai-product-category-crawler"
+  },
+  "keywords": [
+    "web-crawler",
+    "ai",
+    "product-discovery",
+    "typescript",
+    "automation"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "peerDependencies": {
+    "python": ">=3.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ai-web-crawler-ts"
+  }
+}

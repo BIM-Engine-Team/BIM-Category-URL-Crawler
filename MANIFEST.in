@@ -1,0 +1,24 @@
+# Include package metadata and examples
+include README.md
+include requirements.txt
+include example_config.json
+include .env.example
+include setup.py
+
+# Include documentation
+recursive-include docs *.md
+
+# Include source code
+recursive-include src *.py
+
+# Exclude development files
+exclude test_*.py
+exclude *_test.py
+exclude *.pyc
+exclude __pycache__
+exclude .pytest_cache
+exclude .git*
+exclude venv
+exclude build
+exclude dist
+exclude *.egg-info

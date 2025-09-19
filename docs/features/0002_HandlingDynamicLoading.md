@@ -34,3 +34,24 @@ NOTES:
 
 1. We use this system prompt for all request to ai for this plan (you can refine it for me):
    "You are an architect. You want to find the product information from a supplier's website. You are clicking the button to go to the production description page."
+
+---
+
+## PATCH: Playwright Wait Strategy Optimization (2025-09-18)
+
+**Issue:** Original implementation used `wait_until="networkidle"` causing timeouts on analytics-heavy sites.
+
+**Root Cause:** Modern e-commerce sites have continuous network activity (analytics, tracking, A/B testing) that prevents networkidle condition from ever being met.
+
+**Solution Applied:**
+
+1. **Initial Page Load:** Changed `networkidle` → `domcontentloaded` for faster, reliable loading
+2. **Trigger-Specific Waits:** Replaced generic network waiting with targeted `page.wait_for_selector()` strategies:
+   - **Pagination:** Wait for `.pagination-content`, `.product-list`, monitor link count changes
+   - **Load More:** Wait for `.loaded-content`, `.new-items`, track loading indicators
+   - **Tabs:** Wait for `.tab-content.active`, `[aria-hidden="false"]`, verify visibility
+   - **Accordions/Expanders:** Wait for `[aria-expanded="true"]`, `.expanded`, monitor height changes
+
+3. **Enhanced Error Handling:** Added robust JSON parsing with detailed error logging for AI responses
+
+**Result:** Eliminates timeout errors, faster execution, more reliable dynamic content detection.

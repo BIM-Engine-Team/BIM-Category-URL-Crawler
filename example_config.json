@@ -2,5 +2,5 @@
   "url": "https://www.sherwin-williams.com",
   "delay": 1.5,
   "max_pages": 100,
-  "output": "sherwin_williams_products_dynamic_loading_handled.json"
+  "output": "sherwin_williams_products_dynamic_loading_handled_3.json"
 }
