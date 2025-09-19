@@ -50,18 +50,27 @@ def main():
         max_pages = config.get('max_pages', 50)
         output_file = config.get('output')
 
+        # Extract AI configuration from task config if present
+        ai_provider = config.get('ai_provider')
+        ai_model = config.get('ai_model')
+
         logger.info(f"Configuration loaded:")
         logger.info(f"  URL: {base_url}")
         logger.info(f"  Delay: {delay}s")
         logger.info(f"  Max pages: {max_pages}")
         logger.info(f"  Output file: {output_file or 'auto-generated'}")
+        if ai_provider or ai_model:
+            logger.info(f"  AI Provider: {ai_provider or 'default'}")
+            logger.info(f"  AI Model: {ai_model or 'default'}")
 
         # Initialize crawler
         logger.info(f"Initializing AI-guided crawler for: {base_url}")
         crawler = AIGuidedCrawler(
             base_url=base_url,
             delay=delay,
-            max_pages=max_pages
+            max_pages=max_pages,
+            ai_provider=ai_provider,
+            ai_model=ai_model
         )
 
         # Start crawling

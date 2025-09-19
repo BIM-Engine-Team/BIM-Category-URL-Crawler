@@ -29,7 +29,8 @@ except ImportError:
 class AIGuidedCrawler:
     """AI-guided web crawler that uses AI to prioritize exploration paths."""
 
-    def __init__(self, base_url: str, delay: float = 1.0, max_pages: int = 50):
+    def __init__(self, base_url: str, delay: float = 1.0, max_pages: int = 50,
+                 ai_provider: str = None, ai_model: str = None):
         """
         Initialize the AI-guided crawler.
 
@@ -37,11 +38,15 @@ class AIGuidedCrawler:
             base_url: The starting URL (homepage)
             delay: Delay between requests in seconds
             max_pages: Maximum number of pages to explore
+            ai_provider: AI provider to use (overrides config.json)
+            ai_model: AI model to use (overrides config.json)
         """
         self.base_url = base_url.rstrip('/')
         self.domain = urlparse(base_url).netloc
         self.delay = delay
         self.max_pages = max_pages
+        self.ai_provider = ai_provider
+        self.ai_model = ai_model
 
         # Tree structure
         self.root = WebsiteNode(base_url, "")
@@ -304,6 +309,8 @@ IMPORTANT:
                     system_prompt=self.system_prompt,
                     instruction_prompt=instruction_prompt,
                     output_structure_prompt=output_structure_prompt,
+                    provider=self.ai_provider,
+                    model=self.ai_model,
                     max_tokens=4000
                 )
 

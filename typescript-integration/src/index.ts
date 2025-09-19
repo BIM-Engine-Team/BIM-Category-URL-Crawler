@@ -7,11 +7,18 @@ import { config } from "dotenv";
 // Load environment variables from .env file
 config();
 
+export interface AIProviderConfig {
+  provider?: "anthropic" | "openai" | "google";
+  model?: string;
+  apiKey?: string;
+}
+
 export interface CrawlerConfig {
   url: string;
   delay?: number;
   maxPages?: number;
   output?: string;
+  ai?: AIProviderConfig;
 }
 
 export interface CrawlerResult {
@@ -37,6 +44,19 @@ export class AIWebCrawler {
   constructor() {
     // Detect Python command (python3 on Unix, python on Windows)
     this.pythonCommand = os.platform() === "win32" ? "python" : "python3";
+  }
+
+  /**
+   * Create AI configuration for Python backend
+   */
+  private createAIConfig(aiConfig?: AIProviderConfig): any {
+    const defaultProvider = "anthropic";
+    const defaultModel = "claude-sonnet-4-20250514";
+
+    return {
+      ai_provider: aiConfig?.provider || defaultProvider,
+      ai_model: aiConfig?.model || defaultModel,
+    };
   }
 
   /**
@@ -111,6 +131,7 @@ export class AIWebCrawler {
       delay: config.delay || 1.5,
       max_pages: config.maxPages || 50,
       output: config.output,
+      ...this.createAIConfig(config.ai),
     };
 
     // Write config to temp file

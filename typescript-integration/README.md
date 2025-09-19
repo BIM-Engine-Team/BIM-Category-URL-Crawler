@@ -74,18 +74,22 @@ console.log('✅ AI Crawler loaded successfully!');
 
 ```typescript
 // src/crawler-service.ts
-import { AIWebCrawler, CrawlerConfig, CrawlerProgress } from './ai-crawler/dist';
-// or if using Option B: import { AIWebCrawler, CrawlerConfig, CrawlerProgress } from 'bim-category-url-crawler';
+import { AIWebCrawler, CrawlerConfig, CrawlerProgress, AIProviderConfig } from './ai-crawler/dist';
+// or if using Option B: import { AIWebCrawler, CrawlerConfig, CrawlerProgress, AIProviderConfig } from 'bim-category-url-crawler';
 
 export class ProductCrawlerService {
   private crawler = new AIWebCrawler();
 
-  async crawlProducts(websiteUrl: string): Promise<any> {
+  async crawlProducts(websiteUrl: string, aiConfig?: AIProviderConfig): Promise<any> {
     const config: CrawlerConfig = {
       url: websiteUrl,
       delay: 1.5,           // Delay between requests (seconds)
       maxPages: 100,        // Maximum pages to crawl
-      output: `products_${Date.now()}.json`  // Optional: specify output file
+      output: `products_${Date.now()}.json`,  // Optional: specify output file
+      ai: aiConfig || {     // AI model configuration
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-20250514'
+      }
     };
 
     try {
@@ -131,8 +135,16 @@ import { ProductCrawlerService } from './crawler-service';
 async function main() {
   const crawlerService = new ProductCrawlerService();
 
-  // Example: Crawl Sherwin Williams for paint products
-  const result = await crawlerService.crawlProducts('https://www.sherwin-williams.com');
+  // Example 1: Crawl with default Claude Sonnet 4
+  const result1 = await crawlerService.crawlProducts('https://www.sherwin-williams.com');
+
+  // Example 2: Crawl with specific AI model
+  const result2 = await crawlerService.crawlProducts('https://www.sherwin-williams.com', {
+    provider: 'openai',
+    model: 'gpt-4'
+  });
+
+  const result = result1; // Use result1 for the rest of the example
 
   if (result.success) {
     console.log(`\n🎉 Crawling completed successfully!`);
@@ -187,19 +199,97 @@ your-typescript-project/
 ### CrawlerConfig Interface
 
 ```typescript
+interface AIProviderConfig {
+  provider?: "anthropic" | "openai" | "google";
+  model?: string;
+  apiKey?: string;
+}
+
 interface CrawlerConfig {
   url: string; // Target website URL
   delay?: number; // Delay between requests (default: 1.5)
   maxPages?: number; // Max pages to crawl (default: 50)
   output?: string; // Output file path (optional)
+  ai?: AIProviderConfig; // AI model configuration (optional)
 }
+```
+
+### AI Model Configuration
+
+You can configure which AI model and provider to use for the crawler:
+
+```typescript
+// Using Claude Sonnet 4 (default)
+const config: CrawlerConfig = {
+  url: 'https://example.com',
+  ai: {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-20250514'
+  }
+};
+
+// Using OpenAI GPT-4
+const config: CrawlerConfig = {
+  url: 'https://example.com',
+  ai: {
+    provider: 'openai',
+    model: 'gpt-4'
+  }
+};
+
+// Using Google Gemini
+const config: CrawlerConfig = {
+  url: 'https://example.com',
+  ai: {
+    provider: 'google',
+    model: 'gemini-pro'
+  }
+};
+
+// Using default model (claude-sonnet-4-20250514)
+const config: CrawlerConfig = {
+  url: 'https://example.com'
+  // No ai config - will use claude-sonnet-4-20250514
+};
+```
+
+#### Supported AI Models
+
+**Anthropic (provider: "anthropic")**
+- `claude-sonnet-4-20250514` (default - best balance of speed and quality)
+- `claude-3-opus-20240229` (highest quality, slower)
+- `claude-3-sonnet-20240229` (good balance)
+- `claude-3-haiku-20240307` (fastest, most cost-effective)
+
+**OpenAI (provider: "openai")**
+- `gpt-4` (high quality)
+- `gpt-3.5-turbo` (fast and cost-effective)
+
+**Google (provider: "google")**
+- `gemini-pro` (Google's flagship model)
+
+#### API Key Configuration
+
+Make sure to set the appropriate API key in your `.env` file:
+
+```env
+# For Anthropic
+CLAUDE_API_KEY=your_claude_api_key_here
+
+# For OpenAI (if using OpenAI models)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# For Google (if using Google models)
+GOOGLE_API_KEY=your_google_api_key_here
 ```
 
 ### Environment Variables
 
-Required in your `.env` file:
+Required in your `.env` file (depending on which AI provider you use):
 
-- `CLAUDE_API_KEY` - Your Claude API key from [Anthropic Console](https://console.anthropic.com/)
+- `CLAUDE_API_KEY` - Your Claude API key from [Anthropic Console](https://console.anthropic.com/) (required for Anthropic models)
+- `OPENAI_API_KEY` - Your OpenAI API key from [OpenAI Platform](https://platform.openai.com/) (required for OpenAI models)
+- `GOOGLE_API_KEY` - Your Google API key from [Google AI Studio](https://makersuite.google.com/) (required for Google models)
 
 ### Dependencies for Your TypeScript Project
 
