@@ -21,7 +21,7 @@ def read_requirements():
         return [line.strip() for line in f if line.strip() and not line.startswith('#')]
 
 setup(
-    name="ai-product-category-crawler",
+    name="bim-category-url-crawler",
     version="1.0.0",
     description="AI-guided web crawler for product page discovery with dynamic content support",
     long_description=read_readme(),
