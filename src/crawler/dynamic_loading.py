@@ -297,7 +297,6 @@ IMPORTANT:
                         if (link_info.url not in discovered_urls and
                             is_same_domain(link_info.url, self.domain)):
                             valid_links.append(link_info)
-                            discovered_urls.add(link_info.url)
 
                     additional_links.extend(valid_links)
                     page_count += 1
@@ -378,7 +377,6 @@ IMPORTANT:
                         if (link_info.url not in discovered_urls and
                             is_same_domain(link_info.url, self.domain)):
                             valid_links.append(link_info)
-                            discovered_urls.add(link_info.url)
 
                     additional_links.extend(valid_links)
                     click_count += 1
@@ -459,7 +457,6 @@ IMPORTANT:
                     if (link_info.url not in discovered_urls and
                         is_same_domain(link_info.url, self.domain)):
                         additional_links.append(link_info)
-                        discovered_urls.add(link_info.url)
 
         except Exception as e:
             self.logger.error(f"[DYNAMIC_LOADING] Tab handling error: {e}")
@@ -523,7 +520,6 @@ IMPORTANT:
                     if (link_info.url not in discovered_urls and
                         is_same_domain(link_info.url, self.domain)):
                         additional_links.append(link_info)
-                        discovered_urls.add(link_info.url)
 
         except Exception as e:
             self.logger.error(f"[DYNAMIC_LOADING] Accordion handling error: {e}")
@@ -554,7 +550,6 @@ IMPORTANT:
                     if (link_info.url not in discovered_urls and
                         is_same_domain(link_info.url, self.domain)):
                         additional_links.append(link_info)
-                        discovered_urls.add(link_info.url)
 
         except Exception as e:
             self.logger.error(f"[DYNAMIC_LOADING] Expander handling error: {e}")
@@ -624,7 +619,6 @@ IMPORTANT:
                     if (link_info.url not in discovered_urls and
                         is_same_domain(link_info.url, self.domain)):
                         additional_links.append(link_info)
-                        discovered_urls.add(link_info.url)
 
                 initial_height = new_height
                 scroll_attempts += 1

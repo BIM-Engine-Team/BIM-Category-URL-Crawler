@@ -11,7 +11,11 @@ from urllib.parse import urlparse
 from .models import WebsiteNode, OpenSet
 from .ai_scoring import AIScoring
 from .node_processor import NodeProcessor
-from .dynamic_handler_integration import DynamicHandlerIntegration
+from .utils import extract_link_info
+from .dynamic_loading import DynamicLoadingHandler
+import asyncio
+import copy
+import json
 
 
 class AIGuidedCrawler:
@@ -57,16 +61,19 @@ class AIGuidedCrawler:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
 
-        # System prompt for AI
-        system_prompt = (
-            "You are an architect. You want to find the product information from a supplier's website. "
-            "You are clicking the button to go to the production description page."
-        )
+        # Load system prompt from JSON configuration
+        try:
+            with open('src/crawler/system_prompt.json', 'r', encoding='utf-8') as f:
+                prompt_config = json.load(f)
+                system_prompt = prompt_config.get('prompt', 'You are an architect. You want to find the product information from a supplier\'s website.')
+        except Exception as e:
+            self.logger.warning(f"Could not load system prompt from JSON: {e}")
+            system_prompt = "You are an architect. You want to find the product information from a supplier's website."
 
         # Initialize components
         self.ai_scoring = AIScoring(system_prompt, ai_provider, ai_model)
         self.node_processor = NodeProcessor(self.ai_scoring, self.session, self.delay, self.discovered_urls)
-        self.dynamic_handler_integration = DynamicHandlerIntegration(self.domain, self.delay)
+        self.dynamic_handler = DynamicLoadingHandler(self.domain, self.delay)
 
     def process_node(self, node: WebsiteNode) -> None:
         """
@@ -75,8 +82,69 @@ class AIGuidedCrawler:
         Args:
             node: The node to process
         """
-        # Use the node processor to handle the main processing logic
-        self.node_processor.process_node(node, self.products, self.url_to_node)
+        self.logger.info("="*80)
+        self.logger.info(f"[PAGE_PROCESSING] Starting to process node: {node.url}")
+        self.logger.info("="*80)
+
+        # Check if this node has a high direct score (>=8) and verify if it's a product page
+        if hasattr(node, 'score') and node.score >= 8.0:
+            self.logger.info(f"[PAGE_PROCESSING] Node has high direct score ({node.score}), checking if it's a product page...")
+            detected_product_name = self.ai_scoring.check_if_product_page_with_ai(node.url, self.session)
+
+            if detected_product_name:
+                node.product_name = detected_product_name
+                self.products.append({
+                    "productName": detected_product_name,
+                    "url": node.url
+                })
+                self.logger.info(f"[PAGE_PROCESSING] ✓ PRODUCT FOUND: '{detected_product_name}' at {node.url} (direct score: {node.score})")
+                # Mark as explored and return early
+                node.is_explored = True
+                return
+
+        # Mark this node as explored
+        node.is_explored = True
+
+        # Extract children links and their information
+        children_info = extract_link_info(node.url, self.session, self.discovered_urls)
+
+        if not children_info:
+            self.logger.warning(f"[PAGE_PROCESSING] No links found on {node.url}")
+            return
+
+        self.logger.info(f"[PAGE_PROCESSING] Found {len(children_info)} links on {node.url}")
+
+        # Create a pruned copy of children_info for dynamic loading detection
+        pruned_children_info = self._prune_children_info_for_dynamic_detection(children_info)
+
+        # Check and exhaust dynamic loading on ALL pages using pruned children_info
+        self.logger.info(f"[PAGE_PROCESSING] Checking for dynamic loading on {node.url}...")
+        try:
+            additional_links = asyncio.run(
+                self.dynamic_handler.check_and_exhaust_dynamic_loading(
+                    node.url, pruned_children_info, self.discovered_urls  # Use empty set to avoid updating discovered_urls here
+                )
+            )
+
+            if additional_links:
+                self.logger.info(f"[PAGE_PROCESSING] Found {len(additional_links)} additional links via dynamic loading")
+                # Complement the original children_info with findings
+                complemented_children_info = children_info + additional_links
+            else:
+                self.logger.info(f"[PAGE_PROCESSING] No additional links found via dynamic loading")
+                complemented_children_info = children_info
+
+        except Exception as e:
+            self.logger.error(f"[PAGE_PROCESSING] Error in dynamic loading check for {node.url}: {e}")
+            complemented_children_info = children_info
+
+        # Update discovered_urls with the complemented children_info
+        for link_info in complemented_children_info:
+            if link_info.url not in self.discovered_urls:
+                self.discovered_urls.add(link_info.url)
+
+        # Use the node processor to handle the main processing logic with complemented children_info
+        self.node_processor.process_node_with_children_info(node, complemented_children_info, self.products, self.url_to_node)
 
         # Add any queued children to the open set
         if hasattr(node, '_queued_children'):
@@ -84,17 +152,29 @@ class AIGuidedCrawler:
                 self.open_set.add(child_node)
             delattr(node, '_queued_children')
 
-        # Handle dynamic loading if products were found
-        self.dynamic_handler_integration.handle_dynamic_loading(
-            node, self.node_processor, self.products, self.url_to_node, self.discovered_urls
-        )
+        # Respect rate limiting
+        import time
+        time.sleep(self.delay)
 
-        # Add any additional queued children from dynamic loading to the open set
-        if hasattr(node, '_queued_children'):
-            for child_node in node._queued_children:
-                self.open_set.add(child_node)
-            delattr(node, '_queued_children')
-
+    def _prune_children_info_for_dynamic_detection(self, children_info):
+        """
+        Create a pruned copy of children_info for dynamic loading detection.
+        Remove or simplify fields that aren't needed for dynamic loading AI analysis.
+        """
+        pruned_info = []
+        for link_info in children_info:
+            # Create a simplified version with just the essential fields for dynamic loading detection
+            pruned_link = type(link_info)(
+                url=link_info.url,
+                relative_path=link_info.relative_path,
+                title=link_info.title,
+                description=link_info.description[:100],  # Truncate description for efficiency
+                id=link_info.id,
+                link_tag=link_info.link_tag[:500],  # Truncate link tag for efficiency
+                link_text=link_info.link_text
+            )
+            pruned_info.append(pruned_link)
+        return pruned_info
 
     def crawl(self) -> List[Dict[str, str]]:
         """

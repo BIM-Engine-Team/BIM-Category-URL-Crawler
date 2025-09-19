@@ -4,95 +4,145 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an AI-powered web crawler system designed to automatically explore supplier websites and extract architecture material product information. The system uses AI to intelligently navigate websites, build structural maps with link series detection, and generate data extraction schemas.
+This is a production-ready AI-powered web crawler system designed to intelligently explore supplier websites and extract product information. The system uses AI-guided priority-based exploration with Playwright for dynamic content handling, supporting complex e-commerce sites with JavaScript-heavy interfaces.
 
-## Environment Setup
+## Development Commands
 
-### Python Environment
-- Python 3.13.5 is used
-- Virtual environment is located in `venv/` directory
-- Dependencies are managed via `requirements.txt` (currently empty)
-
-### Environment Configuration
-- Copy `.env.example` to `.env` and configure:
-  - `CLAUDE_API_KEY`: Required for AI agent functionality
-  - `OUTPUT_DIR`: Directory for storing exploration artifacts (default: output)
-  - `LOG_LEVEL`: Logging verbosity (default: INFO)
-
-### Basic Commands
+### Installation and Setup
 ```bash
-# Activate virtual environment
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
+# Install in development mode (recommended for development)
+pip install -e .
 
-# Install dependencies (when requirements.txt is populated)
+# Install dependencies
 pip install -r requirements.txt
 
-# Run Python scripts
-python <script_name>.py
+# Install Playwright browser drivers (required)
+playwright install
+
+# Environment setup
+cp .env.example .env  # Configure API keys
 ```
 
-## Architecture
+### Running the Crawler
+```bash
+# Console script entry point (after pip install -e .)
+ai-crawler config.json
 
-### Three-Phase System Design
+# Direct Python execution
+python src/main.py config.json
 
-The system is architected around three distinct phases as outlined in the technical documentation:
+# Verbose logging
+python src/main.py config.json -v
+```
 
-1. **EXPLORE PHASE**: AI agent explores websites to build structural tree
-   - Starts from homepage and uses AI tools to analyze page structure
-   - Detects link series patterns to avoid redundant exploration
-   - Builds hierarchical website structure with confidence scoring
-   - Implements smart navigation with priority-based exploration
+### TypeScript Integration
+```bash
+cd typescript-integration
+npm install && npm run build
+```
 
-2. **SCHEMA PHASE**: Generate crawling schemas from exploration data
-   - Analyzes exploration tree to identify product page patterns
-   - Creates extraction rules for product information fields
-   - Generates URL patterns for systematic crawling
+## Architecture Overview
 
-3. **EXECUTE PHASE**: Use schemas to extract product data
-   - Applies generated schemas to crawl product information
-   - May not require AI for execution phase
+### AI-Guided Priority Exploration System
 
-### Key Architectural Concepts
+The system implements a **priority-based AI-guided exploration** using a max-heap data structure combined with hierarchical tree navigation, fundamentally different from traditional breadth-first or depth-first crawling.
 
-#### Link Series Detection
-The system intelligently handles repetitive link patterns (e.g., pagination, category listings) by:
-- Detecting groups of similar URLs using pattern matching
-- Selecting representative samples (3-5) instead of exploring all links
-- Creating series metadata to represent entire link groups efficiently
+**Core Components:**
 
-#### Planned Directory Structure
-Based on the technical plan, the system will be organized as:
-- `src/models/`: Core data structures (WebsiteNode, LinkSeries, ExplorationState)
-- `src/explorer/`: Website exploration engine and algorithms
-- `src/schema/`: Schema generation from exploration data
-- `src/config/`: Configuration parameters and settings
-- `src/utils/`: HTTP client and utility functions
+1. **AI Crawler Engine** (`src/crawler/ai_crawler.py`):
+   - Uses AI scoring (0-10 scale) to prioritize link exploration
+   - Implements max-heap (`OpenSet`) with average ancestral scoring
+   - Maintains hierarchical website structure (`WebsiteNode`)
+
+2. **Dynamic Content Handler** (`src/crawler/dynamic_loading.py`):
+   - Playwright-powered detection of dynamic elements
+   - Supports: Pagination, Load More, Infinite Scroll, Tabs, Accordions
+   - AI-powered pattern identification with targeted waiting strategies
+
+3. **Multi-Provider AI Client** (`src/util/ai_client/`):
+   - Abstraction layer for Anthropic Claude, OpenAI, Google
+   - JSON configuration-based routing and middleware
+   - Standardized prompt system with role-based instructions
+
+### AI Scoring Strategy
+
+- **Scores < 1**: Never explore (marked as explored)
+- **Scores > 9**: Product pages (extract info, mark as explored)
+- **Scores 1-9**: Add to priority queue for future exploration
+- **Average ancestral scoring**: Ensures context-aware prioritization
+
+### Configuration System
+
+**Three-tier configuration:**
+
+1. **Environment Variables** (`.env`): API keys, optional settings
+2. **AI Configuration** (`config.json`): Provider and model selection
+3. **Task Configuration** (JSON files): Crawl parameters and targets
+
+**Example task configuration:**
+```json
+{
+  "url": "https://example.com",
+  "delay": 1.5,
+  "max_pages": 100,
+  "output": "results.json"
+}
+```
+
+### System Prompts Architecture
+
+Role-based prompting stored in `src/crawler/system_prompt.json`:
+```json
+{
+  "prompt": "You are an architect. You want to find the product information from a supplier's website."
+}
+```
+
+Applied consistently across all AI interactions for scoring and dynamic loading detection.
+
+### Key Data Models
+
+- **`WebsiteNode`**: Hierarchical website representation with parent-child relationships
+- **`LinkInfo`**: Structured link metadata with AI scoring integration
+- **`OpenSet`**: Priority queue implementation with average scoring
+- **Dynamic Loading Classes**: Pattern-specific handlers for different dynamic content types
+
+### Dynamic Loading Optimization (Post-2025-09-18)
+
+**Problem Solved**: Eliminated `networkidle` timeouts on analytics-heavy sites
+**Solution**: Trigger-specific selector waiting instead of network monitoring
+- AI identifies dynamic elements
+- Playwright exhausts them with targeted waits
+- Avoids infinite waiting on sites with continuous analytics requests
+
+### Directory Structure
+
+```
+src/
+├── crawler/           # Core crawling logic
+│   ├── ai_crawler.py         # Main AI-guided exploration engine
+│   ├── dynamic_loading.py    # Dynamic content detection/handling
+│   └── system_prompt.json    # AI prompting configuration
+├── util/
+│   ├── ai_client/     # Multi-provider AI integration
+│   ├── link_utils.py  # URL processing and validation
+│   └── website_node.py # Tree data structure
+└── main.py            # Entry point and CLI interface
+```
+
+### Package Distribution
+
+- **Python Package**: `bim-category-url-crawler` with console script
+- **Console Entry**: `ai-crawler` command after installation
+- **TypeScript Wrapper**: Node.js integration in `typescript-integration/`
+- **Development Installation**: `pip install -e .` for local development
 
 ### Documentation Workflow
 
-The project uses a structured approach to feature development:
+Structured feature development using templates in `docs/features/commands/`:
+- `@plan_feature.md`: Technical planning
+- `@create_brief.md`: Product briefs
+- `@code_review.md`: Implementation review
+- `@write_docs.md`: Documentation creation
 
-#### Planning Templates (in docs/features/commands/)
-- `@plan_feature.md`: Create technical plans for new features
-- `@create_brief.md`: Generate product briefs and context
-- `@code_review.md`: Review completed implementations
-- `@write_docs.md`: Create comprehensive documentation
-
-#### Usage Pattern
-```
-@plan_feature.md
-[Feature description for AI web crawler enhancement]
-```
-
-Plans are saved as `docs/features/NNNN_PLAN.md` with incremental numbering.
-
-## Current Status
-
-This is an early-stage project with comprehensive planning documentation but minimal implementation. The codebase currently contains:
-- Basic environment setup (venv, .env configuration)
-- Detailed technical plans in `docs/features/`
-- Planning workflow templates for feature development
-
-When implementing features, refer to the detailed technical specifications in `docs/features/0001_PLAN.md` for the complete system architecture and implementation approach.
+Plans saved as `docs/features/NNNN_*.md` with incremental numbering.

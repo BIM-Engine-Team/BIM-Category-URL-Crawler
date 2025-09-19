@@ -34,72 +34,16 @@ class NodeProcessor:
     def process_node(self, node: WebsiteNode, products: List[Dict[str, str]],
                      url_to_node: Dict[str, WebsiteNode]) -> None:
         """
-        Process a single node using AI to score its children.
-
-        Args:
-            node: The node to process
-            products: List to append found products to
-            url_to_node: Mapping from URLs to nodes
+        DEPRECATED: This method is kept for backward compatibility only.
+        Use process_node_with_children_info instead.
         """
-        self.logger.info("="*80)
-        self.logger.info(f"[PAGE_PROCESSING] Starting to process node: {node.url}")
-        self.logger.info("="*80)
+        self.logger.warning("[PAGE_PROCESSING] DEPRECATED: process_node called. This method should not be used in the new architecture.")
 
-        # Check if this node has a high direct score (>8) and verify if it's a product page
-        if hasattr(node, 'score') and node.score > 8.0:
-            self.logger.info(f"[PAGE_PROCESSING] Node has high direct score ({node.score}), checking if it's a product page...")
-            detected_product_name = self.ai_scoring.check_if_product_page_with_ai(node.url, self.session)
-
-            if detected_product_name:
-                node.product_name = detected_product_name
-                products.append({
-                    "productName": detected_product_name,
-                    "url": node.url
-                })
-                self.logger.info(f"[PAGE_PROCESSING] ✓ PRODUCT FOUND: '{detected_product_name}' at {node.url} (direct score: {node.score})")
-                # Mark as explored and return early
-                node.is_explored = True
-                return
-
-        # Mark this node as explored
-        node.is_explored = True
-
-        # Extract children links and their information
+        # Extract children links and their information for compatibility
         children_info = extract_link_info(node.url, self.session, self.discovered_urls)
 
-        if not children_info:
-            self.logger.warning(f"[PAGE_PROCESSING] No links found on {node.url}")
-            return
-
-        self.logger.info(f"[PAGE_PROCESSING] Found {len(children_info)} links on {node.url}")
-        for i, link in enumerate(children_info):
-            self.logger.debug(f"[PAGE_PROCESSING] Link {i+1}: {link.relative_path} - '{link.title}' - {link.description[:100]}...")
-
-        self.logger.info(f"[PAGE_PROCESSING] Sending AI prompt to score {len(children_info)} links from {node.url}")
-
-        try:
-            # Get AI response with retry logic
-            scores = self.ai_scoring.get_ai_scores_with_retry(children_info)
-            self.logger.info(f"[PAGE_PROCESSING] Got {len(scores)} AI scores for {node.url}")
-
-            # Log AI scoring results in requested format with color coding
-            self._log_ai_score_summary(scores, children_info)
-
-            # Process each child with its score using ID-based matching
-            skipped_count, product_count, queued_count = self._process_scored_links(
-                children_info, scores, node, products, url_to_node
-            )
-
-            self.logger.info(f"[PAGE_PROCESSING] Processing complete for {node.url}: {skipped_count} skipped, {product_count} products found, {queued_count} queued")
-
-            # Return counts for potential dynamic loading handling
-            node._processing_results = {
-                'product_count': product_count,
-                'children_info': children_info
-            }
-
-        except Exception as e:
-            self.logger.error(f"[PAGE_PROCESSING] Error processing node {node.url}: {e}")
+        # Call the new method
+        self.process_node_with_children_info(node, children_info, products, url_to_node)
 
         # Respect rate limiting
         time.sleep(self.delay)
@@ -209,60 +153,42 @@ class NodeProcessor:
 
         return node
 
-    def process_additional_links(self, additional_links: List[LinkInfo], node: WebsiteNode,
-                               products: List[Dict[str, str]], url_to_node: Dict[str, WebsiteNode]) -> None:
-        """Process additional links found via dynamic loading."""
-        if not additional_links:
+
+    def process_node_with_children_info(self, node: WebsiteNode, children_info: List[LinkInfo],
+                                       products: List[Dict[str, str]], url_to_node: Dict[str, WebsiteNode]) -> None:
+        """
+        Process a single node with pre-extracted children information.
+
+        Args:
+            node: The node to process
+            children_info: Pre-extracted children link information (may include dynamic content)
+            products: List to append found products to
+            url_to_node: Mapping from URLs to nodes
+        """
+        if not children_info:
+            self.logger.warning(f"[PAGE_PROCESSING] No links provided for {node.url}")
             return
 
-        self.logger.info(f"[PAGE_PROCESSING] Found {len(additional_links)} additional links via dynamic loading")
+        self.logger.info(f"[PAGE_PROCESSING] Processing {len(children_info)} links from {node.url} (including dynamic content)")
+        for i, link in enumerate(children_info):
+            self.logger.debug(f"[PAGE_PROCESSING] Link {i+1}: {link.relative_path} - '{link.title}' - {link.description[:100]}...")
+
+        self.logger.info(f"[PAGE_PROCESSING] Sending AI prompt to score {len(children_info)} links from {node.url}")
 
         try:
-            # Get AI scores for additional links
-            additional_scores = self.ai_scoring.get_ai_scores_with_retry(additional_links)
+            # Get AI response with retry logic
+            scores = self.ai_scoring.get_ai_scores_with_retry(children_info)
+            self.logger.info(f"[PAGE_PROCESSING] Got {len(scores)} AI scores for {node.url}")
 
-            # Process additional links
-            for link_info in additional_links:
-                # Find the corresponding score by ID
-                score_data = None
-                for score_item in additional_scores:
-                    if score_item.get("id") == link_info.id:
-                        score_data = score_item
-                        break
+            # Log AI scoring results in requested format with color coding
+            self._log_ai_score_summary(scores, children_info)
 
-                if score_data is None and link_info.id < len(additional_scores):
-                    score_data = additional_scores[link_info.id]
+            # Process each child with its score using ID-based matching
+            skipped_count, product_count, queued_count = self._process_scored_links(
+                children_info, scores, node, products, url_to_node
+            )
 
-                if score_data is None:
-                    score_data = {"id": link_info.id, "score": 0.0}
-
-                score = score_data.get("score", 0.0)
-                product_name = score_data.get("productName")
-
-                # Create child node for additional link
-                child_node = self._create_child_node(link_info, node, score, product_name, url_to_node)
-
-                # Handle scoring results for additional links
-                if score < 1.0:
-                    child_node.is_explored = True
-                    self.logger.debug(f"[PAGE_PROCESSING] DYNAMIC: SKIPPING '{link_info.title}' (score: {score} < 1.0)")
-                elif score > 9.0:
-                    child_node.is_explored = True
-                    if product_name:
-                        child_node.product_name = product_name
-                        products.append({
-                            "productName": product_name,
-                            "url": link_info.url
-                        })
-                        self.logger.info(f"[PAGE_PROCESSING] DYNAMIC: ✓ PRODUCT FOUND: '{product_name}' at {link_info.url} (score: {score})")
-                    else:
-                        self.logger.info(f"[PAGE_PROCESSING] DYNAMIC: ✓ HIGH SCORE but no product name: '{link_info.title}' (score: {score})")
-                else:
-                    # Store for potential addition to open set
-                    if not hasattr(node, '_queued_children'):
-                        node._queued_children = []
-                    node._queued_children.append(child_node)
-                    self.logger.debug(f"[PAGE_PROCESSING] DYNAMIC: QUEUED for exploration: '{link_info.title}' (score: {score})")
+            self.logger.info(f"[PAGE_PROCESSING] Processing complete for {node.url}: {skipped_count} skipped, {product_count} products found, {queued_count} queued")
 
         except Exception as e:
-            self.logger.error(f"[PAGE_PROCESSING] Error processing additional links: {e}")
+            self.logger.error(f"[PAGE_PROCESSING] Error processing node {node.url}: {e}")

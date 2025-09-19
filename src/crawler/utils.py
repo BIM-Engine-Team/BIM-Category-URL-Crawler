@@ -152,10 +152,6 @@ def _create_link_info(href: str, element, base_url: str, link_id: int, discovere
         link_text=link_text[:100]  # The visible text content of the link
     )
 
-    # Add to discovered URLs set to avoid future duplicates
-    if discovered_urls is not None:
-        discovered_urls.add(absolute_url)
-
     return link_info
 
 
