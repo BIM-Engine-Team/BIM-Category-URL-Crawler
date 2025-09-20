@@ -1,14 +1,13 @@
 {
   "name": "bim-category-url-crawler",
   "version": "1.0.0",
-  "description": "TypeScript wrapper for AI-guided web crawler",
+  "description": "TypeScript wrapper for AI-guided web crawler - single entry function that mirrors Python main.py",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "prepublish": "npm run build",
-    "test": "jest",
-    "install-python-deps": "pip install bim-category-url-crawler"
+    "test": "jest"
   },
   "keywords": [
     "web-crawler",
@@ -30,9 +29,6 @@
   },
   "engines": {
     "node": ">=16.0.0"
-  },
-  "peerDependencies": {
-    "python": ">=3.8"
   },
   "repository": {
     "type": "git",

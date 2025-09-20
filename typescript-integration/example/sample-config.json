@@ -1,0 +1,8 @@
+{
+  "url": "https://www.sherwin-williams.com",
+  "delay": 1.5,
+  "max_pages": 50,
+  "output": "crawl_results.json",
+  "ai_provider": "anthropic",
+  "ai_model": "claude-sonnet-4-20250514"
+}

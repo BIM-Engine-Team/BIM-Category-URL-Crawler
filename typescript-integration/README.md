@@ -34,22 +34,7 @@ npm install
 npm run build
 ```
 
-### Step 4: Integrate into Your TypeScript Project
-
-**Option A: Copy the built package to your project**
-```bash
-# From your TypeScript project root
-cp -r ../bim-category-url-crawler/typescript-integration/dist ./ai-crawler
-cp ../bim-category-url-crawler/typescript-integration/package.json ./ai-crawler/
-```
-
-**Option B: Install as local dependency**
-```bash
-# From your TypeScript project root
-npm install ../bim-category-url-crawler/typescript-integration
-```
-
-### Step 5: Environment Setup
+### Step 4: Environment Setup
 
 Create a `.env` file in your TypeScript project root:
 
@@ -57,65 +42,31 @@ Create a `.env` file in your TypeScript project root:
 CLAUDE_API_KEY=your_claude_api_key_here
 ```
 
-### Step 6: Quick Test
-
-```bash
-# Test the installation
-node -e "
-const { AIWebCrawler } = require('./ai-crawler/dist');
-const crawler = new AIWebCrawler();
-console.log('✅ AI Crawler loaded successfully!');
-"
-```
-
 ## 💻 Usage in Your TypeScript Project
 
-### Basic Implementation
+### Simple Entry Function (Recommended)
+
+The package now provides a single entry function that mirrors the Python `main.py` behavior:
 
 ```typescript
 // src/crawler-service.ts
-import { AIWebCrawler, CrawlerConfig, CrawlerProgress, AIProviderConfig } from './ai-crawler/dist';
-// or if using Option B: import { AIWebCrawler, CrawlerConfig, CrawlerProgress, AIProviderConfig } from 'bim-category-url-crawler';
+import aiCrawler from './path/to/typescript-integration/dist/index';
+// or if installed via npm: import aiCrawler from 'bim-category-url-crawler';
 
 export class ProductCrawlerService {
-  private crawler = new AIWebCrawler();
-
-  async crawlProducts(websiteUrl: string, aiConfig?: AIProviderConfig): Promise<any> {
-    const config: CrawlerConfig = {
-      url: websiteUrl,
-      delay: 1.5,           // Delay between requests (seconds)
-      maxPages: 100,        // Maximum pages to crawl
-      output: `products_${Date.now()}.json`,  // Optional: specify output file
-      ai: aiConfig || {     // AI model configuration
-        provider: 'anthropic',
-        model: 'claude-sonnet-4-20250514'
-      }
-    };
-
+  async crawlProducts(configPath: string) {
     try {
-      console.log(`🚀 Starting to crawl: ${websiteUrl}`);
+      // Single function call - just like Python main.py
+      const results = await aiCrawler(configPath);
 
-      const results = await this.crawler.crawl(config, (progress: CrawlerProgress) => {
-        // Handle real-time progress updates
-        switch (progress.type) {
-          case 'progress':
-            console.log(`📍 ${progress.message}`);
-            break;
-          case 'error':
-            console.error(`❌ ${progress.message}`);
-            break;
-          case 'complete':
-            console.log(`✅ ${progress.message}`);
-            break;
-        }
-      });
+      console.log(`Found ${results.products.length} products!`);
+      console.log(`Processed ${results.pages_processed} pages`);
+      console.log(`Total nodes discovered: ${results.total_nodes}`);
 
       return {
         success: true,
-        data: results,
-        message: `Found ${results.products.length} products!`
+        data: results
       };
-
     } catch (error) {
       return {
         success: false,
@@ -126,49 +77,58 @@ export class ProductCrawlerService {
 }
 ```
 
+### Config File Format
+
+Create your config file in JSON format (same as Python main.py expects):
+
+```json
+{
+  "url": "https://www.sherwin-williams.com",
+  "delay": 1.5,
+  "max_pages": 50,
+  "output": "crawl_results.json",
+  "ai_provider": "anthropic",
+  "ai_model": "claude-sonnet-4-20250514"
+}
+```
+
 ### Complete Example Application
 
 ```typescript
 // src/main.ts
-import { ProductCrawlerService } from './crawler-service';
+import aiCrawler from './path/to/typescript-integration/dist/index';
+import * as path from 'path';
 
 async function main() {
-  const crawlerService = new ProductCrawlerService();
+  try {
+    // Path to your config file (same format as Python main.py expects)
+    const configPath = path.join(__dirname, 'config.json');
 
-  // Example 1: Crawl with default Claude Sonnet 4
-  const result1 = await crawlerService.crawlProducts('https://www.sherwin-williams.com');
+    // Call the crawler with config file path - mirrors Python main.py behavior
+    const results = await aiCrawler(configPath);
 
-  // Example 2: Crawl with specific AI model
-  const result2 = await crawlerService.crawlProducts('https://www.sherwin-williams.com', {
-    provider: 'openai',
-    model: 'gpt-4'
-  });
-
-  const result = result1; // Use result1 for the rest of the example
-
-  if (result.success) {
-    console.log(`\n🎉 Crawling completed successfully!`);
+    console.log('🎉 Crawling completed!');
     console.log(`📊 Summary:`);
-    console.log(`   • Products found: ${result.data.products.length}`);
-    console.log(`   • Pages processed: ${result.data.pagesProcessed}`);
-    console.log(`   • Total nodes discovered: ${result.data.totalNodes}`);
-    console.log(`   • Domain: ${result.data.domain}`);
+    console.log(`   • Products found: ${results.products.length}`);
+    console.log(`   • Pages processed: ${results.pages_processed}`);
+    console.log(`   • Total nodes discovered: ${results.total_nodes}`);
+    console.log(`   • Domain: ${results.domain}`);
 
     // Display first few products
-    if (result.data.products.length > 0) {
+    if (results.products.length > 0) {
       console.log('\n🛍️ Sample products:');
-      result.data.products.slice(0, 5).forEach((product, index) => {
+      results.products.slice(0, 5).forEach((product, index) => {
         console.log(`   ${index + 1}. ${product.productName}`);
         console.log(`      → ${product.url}`);
       });
 
-      if (result.data.products.length > 5) {
-        console.log(`   ... and ${result.data.products.length - 5} more products`);
+      if (results.products.length > 5) {
+        console.log(`   ... and ${results.products.length - 5} more products`);
       }
     }
 
-  } else {
-    console.error(`❌ Crawling failed: ${result.error}`);
+  } catch (error) {
+    console.error('❌ Crawler failed:', error.message);
     process.exit(1);
   }
 }
@@ -185,103 +145,44 @@ After integration, your TypeScript project should look like this:
 your-typescript-project/
 ├── src/
 │   ├── crawler-service.ts    # Your crawler service wrapper
-│   └── main.ts              # Your main application
-├── ai-crawler/              # Copied crawler package
-│   ├── dist/               # Built TypeScript files
-│   └── package.json        # Package metadata
-├── .env                    # Your environment variables
+│   ├── main.ts              # Your main application
+│   └── config.json          # Crawler configuration
+├── .env                     # Your environment variables (CLAUDE_API_KEY)
 ├── package.json            # Your project dependencies
-└── products_*.json         # Generated crawler results
+└── *.json                  # Generated crawler results
 ```
 
 ## Configuration
 
-### CrawlerConfig Interface
+### Config File Format
 
-```typescript
-interface AIProviderConfig {
-  provider?: "anthropic" | "openai" | "google";
-  model?: string;
-  apiKey?: string;
+The TypeScript wrapper uses the same configuration format as the Python main.py:
+
+```json
+{
+  "url": "https://target-website.com",           // Required: Target website URL
+  "delay": 1.5,                                 // Optional: Delay between requests (default: 1.0)
+  "max_pages": 100,                            // Optional: Max pages to crawl (default: 50)
+  "output": "results.json",                    // Optional: Output file path (auto-generated if omitted)
+  "ai_provider": "anthropic",                  // Optional: AI provider (default: anthropic)
+  "ai_model": "claude-sonnet-4-20250514"      // Optional: AI model (default: claude-sonnet-4-20250514)
 }
-
-interface CrawlerConfig {
-  url: string; // Target website URL
-  delay?: number; // Delay between requests (default: 1.5)
-  maxPages?: number; // Max pages to crawl (default: 50)
-  output?: string; // Output file path (optional)
-  ai?: AIProviderConfig; // AI model configuration (optional)
-}
-```
-
-### AI Model Configuration
-
-You can configure which AI model and provider to use for the crawler:
-
-```typescript
-// Using Claude Sonnet 4 (default)
-const config: CrawlerConfig = {
-  url: 'https://example.com',
-  ai: {
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-20250514'
-  }
-};
-
-// Using OpenAI GPT-4
-const config: CrawlerConfig = {
-  url: 'https://example.com',
-  ai: {
-    provider: 'openai',
-    model: 'gpt-4'
-  }
-};
-
-// Using Google Gemini
-const config: CrawlerConfig = {
-  url: 'https://example.com',
-  ai: {
-    provider: 'google',
-    model: 'gemini-pro'
-  }
-};
-
-// Using default model (claude-sonnet-4-20250514)
-const config: CrawlerConfig = {
-  url: 'https://example.com'
-  // No ai config - will use claude-sonnet-4-20250514
-};
 ```
 
 #### Supported AI Models
 
-**Anthropic (provider: "anthropic")**
+**Anthropic (ai_provider: "anthropic")**
 - `claude-sonnet-4-20250514` (default - best balance of speed and quality)
 - `claude-3-opus-20240229` (highest quality, slower)
 - `claude-3-sonnet-20240229` (good balance)
 - `claude-3-haiku-20240307` (fastest, most cost-effective)
 
-**OpenAI (provider: "openai")**
+**OpenAI (ai_provider: "openai")**
 - `gpt-4` (high quality)
 - `gpt-3.5-turbo` (fast and cost-effective)
 
-**Google (provider: "google")**
+**Google (ai_provider: "google")**
 - `gemini-pro` (Google's flagship model)
-
-#### API Key Configuration
-
-Make sure to set the appropriate API key in your `.env` file:
-
-```env
-# For Anthropic
-CLAUDE_API_KEY=your_claude_api_key_here
-
-# For OpenAI (if using OpenAI models)
-OPENAI_API_KEY=your_openai_api_key_here
-
-# For Google (if using Google models)
-GOOGLE_API_KEY=your_google_api_key_here
-```
 
 ### Environment Variables
 
@@ -291,39 +192,32 @@ Required in your `.env` file (depending on which AI provider you use):
 - `OPENAI_API_KEY` - Your OpenAI API key from [OpenAI Platform](https://platform.openai.com/) (required for OpenAI models)
 - `GOOGLE_API_KEY` - Your Google API key from [Google AI Studio](https://makersuite.google.com/) (required for Google models)
 
-### Dependencies for Your TypeScript Project
-
-Add these to your `package.json`:
-
-```json
-{
-  "dependencies": {
-    "dotenv": "^16.3.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
-  }
-}
-```
-
 ## API Reference
 
-### AIWebCrawler Class
-
-#### Methods
-
-- `crawl(config, onProgress?)` - Run the crawler
-- `checkInstallation()` - Check if Python package is installed
-- `installCrawler()` - Install the Python package
-
-#### Progress Callback
+### aiCrawler Function
 
 ```typescript
-interface CrawlerProgress {
-  type: "progress" | "error" | "complete";
-  message: string;
-  data?: any;
+function aiCrawler(configPath: string): Promise<CrawlerResult>
+```
+
+**Parameters:**
+- `configPath` - Path to JSON configuration file
+
+**Returns:**
+- `Promise<CrawlerResult>` - The crawling results
+
+### CrawlerResult Interface
+
+```typescript
+interface CrawlerResult {
+  products: Array<{
+    productName: string;
+    url: string;
+  }>;
+  pages_processed: number;
+  total_nodes: number;
+  base_url: string;
+  domain: string;
 }
 ```
 
@@ -331,13 +225,13 @@ interface CrawlerProgress {
 
 - Node.js ≥ 16.0.0
 - Python ≥ 3.8
-- Claude API key from Anthropic
+- AI API key (Claude, OpenAI, or Google)
 
 ## 🌟 Key Features
 
-- 🤖 **AI-guided crawling** - Intelligent page prioritization using Claude AI
+- 🤖 **AI-guided crawling** - Intelligent page prioritization using AI
 - 🔄 **Dynamic content support** - Handles pagination, load-more buttons, tabs, accordions, infinite scroll
-- 📊 **Real-time progress tracking** - Live updates during crawling process
+- 📊 **Simple integration** - Single function call just like Python main.py
 - 🛡️ **Robust error handling** - Comprehensive error recovery and reporting
 - 📁 **Structured JSON output** - Clean, consistent data format
 - ⚙️ **Configurable parameters** - Customizable delays, page limits, and output options
@@ -354,9 +248,9 @@ interface CrawlerProgress {
       "url": "https://example.com/product1"
     }
   ],
-  "pagesProcessed": 45,
-  "totalNodes": 120,
-  "baseUrl": "https://example.com",
+  "pages_processed": 45,
+  "total_nodes": 120,
+  "base_url": "https://example.com",
   "domain": "example.com"
 }
 ```
@@ -367,10 +261,12 @@ The crawler includes comprehensive error handling:
 
 ```typescript
 try {
-  const results = await crawler.crawl(config);
+  const results = await aiCrawler('./config.json');
 } catch (error) {
   if (error.message.includes("CLAUDE_API_KEY")) {
     console.error("Please set CLAUDE_API_KEY in your .env file");
+  } else if (error.message.includes("Config file not found")) {
+    console.error("Config file does not exist");
   } else {
     console.error("Crawler failed:", error.message);
   }
@@ -382,9 +278,14 @@ try {
 **"CLAUDE_API_KEY environment variable is required"**
 - Create `.env` file with `CLAUDE_API_KEY=your_key_here`
 
-**"Python crawler not found"**
+**"Config file not found"**
+- Ensure the config file path exists and is accessible
+- Use absolute paths or paths relative to your working directory
+
+**"Failed to start Python crawler process"**
 - Run `pip install -e .` from the cloned repository root
+- Ensure Python ≥ 3.8: `python --version`
 
 **Installation issues**
-- Check Python ≥ 3.8: `python --version`
 - Update pip: `pip install --upgrade pip`
+- Check file permissions for the config file
