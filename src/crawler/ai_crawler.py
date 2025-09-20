@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from .models import WebsiteNode, OpenSet
 from .ai_scoring import AIScoring
 from .node_processor import NodeProcessor
-from .utils import extract_link_info
+from .utils import extract_link_info_from_html
 from .dynamic_loading import DynamicLoadingHandler
 import asyncio
 import copy
@@ -106,16 +106,19 @@ class AIGuidedCrawler:
         node.is_explored = True
 
         # Extract children links and their information
-        children_info = extract_link_info(node.url, self.session, self.discovered_urls)
+        try:
+            response = self.session.get(node.url, timeout=10)
+            response.raise_for_status()
+            children_info = extract_link_info_from_html(response.text, node.url, self.discovered_urls)
+        except Exception as e:
+            self.logger.error(f"Error fetching {node.url}: {e}")
+            children_info = []
 
         if not children_info:
             self.logger.warning(f"[PAGE_PROCESSING] No links found on {node.url}")
             return
 
         self.logger.info(f"[PAGE_PROCESSING] Found {len(children_info)} links on {node.url}")
-
-        # Create a pruned copy of children_info for dynamic loading detection
-        pruned_children_info = self._prune_children_info_for_dynamic_detection(children_info)
 
         # Check and exhaust dynamic loading on ALL pages using pruned children_info
         self.logger.info(f"[PAGE_PROCESSING] Checking for dynamic loading on {node.url}...")
@@ -155,26 +158,6 @@ class AIGuidedCrawler:
         # Respect rate limiting
         import time
         time.sleep(self.delay)
-
-    def _prune_children_info_for_dynamic_detection(self, children_info):
-        """
-        Create a pruned copy of children_info for dynamic loading detection.
-        Remove or simplify fields that aren't needed for dynamic loading AI analysis.
-        """
-        pruned_info = []
-        for link_info in children_info:
-            # Create a simplified version with just the essential fields for dynamic loading detection
-            pruned_link = type(link_info)(
-                url=link_info.url,
-                relative_path=link_info.relative_path,
-                title=link_info.title,
-                description=link_info.description[:100],  # Truncate description for efficiency
-                id=link_info.id,
-                link_tag=link_info.link_tag[:500],  # Truncate link tag for efficiency
-                link_text=link_info.link_text
-            )
-            pruned_info.append(pruned_link)
-        return pruned_info
 
     def crawl(self) -> List[Dict[str, str]]:
         """

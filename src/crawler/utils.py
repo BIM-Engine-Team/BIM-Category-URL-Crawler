@@ -155,110 +155,17 @@ def _create_link_info(href: str, element, base_url: str, link_id: int, discovere
     return link_info
 
 
-def extract_link_info(url: str, session: Optional[requests.Session] = None, discovered_urls: Optional[set] = None) -> List[LinkInfo]:
+
+def extract_link_info_from_html(html_content: str, base_url: str, discovered_urls: Optional[set] = None, start_id: int = 0, session_discovered_urls: Optional[set] = None) -> List[LinkInfo]:
     """
-    Extract detailed link information from a page.
-
-    Args:
-        url: The URL to extract links from
-        session: Optional requests session for connection reuse
-        discovered_urls: Optional set of already discovered URLs to avoid duplicates
-
-    Returns:
-        List of LinkInfo objects containing url, relative_path, title, and description
-    """
-    if session is None:
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
-
-    try:
-        response = session.get(url, timeout=10)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        link_infos = []
-
-        # Find all navigable elements
-        link_id = 0
-
-        # 1. Standard anchor tags with href attributes
-        for link_tag in soup.find_all('a', href=True):
-            href = link_tag['href'].strip()
-            if href and not href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(href, link_tag, url, link_id, discovered_urls)
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
-
-        # 2. Image map areas
-        for area_tag in soup.find_all('area', href=True):
-            href = area_tag['href'].strip()
-            if href and not href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(href, area_tag, url, link_id, discovered_urls)
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
-
-        # 3. Forms with action attributes
-        for form_tag in soup.find_all('form', action=True):
-            action = form_tag['action'].strip()
-            if action and not action.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(action, form_tag, url, link_id, discovered_urls, element_type="form")
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
-
-        # 4. Buttons with formaction
-        for button_tag in soup.find_all('button', formaction=True):
-            formaction = button_tag['formaction'].strip()
-            if formaction and not formaction.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(formaction, button_tag, url, link_id, discovered_urls)
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
-
-        # 5. Elements with data attributes (data-href, data-url, data-link)
-        data_attrs = ['data-href', 'data-url', 'data-link', 'data-target']
-        for attr in data_attrs:
-            for element in soup.find_all(attrs={attr: True}):
-                data_url = element.get(attr, '').strip()
-                if data_url and not data_url.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                    link_info = _create_link_info(data_url, element, url, link_id, discovered_urls)
-                    if link_info:
-                        link_infos.append(link_info)
-                        link_id += 1
-
-        # 6. Clickable elements with onclick containing location or window.open
-        onclick_pattern = re.compile(r'(?:location\.href|window\.open)\s*\(\s*["\']([^"\']+)["\']', re.IGNORECASE)
-        for element in soup.find_all(attrs={"onclick": True}):
-            onclick = element.get('onclick', '')
-            match = onclick_pattern.search(onclick)
-            if match:
-                js_url = match.group(1).strip()
-                if js_url and not js_url.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                    link_info = _create_link_info(js_url, element, url, link_id, discovered_urls)
-                    if link_info:
-                        link_infos.append(link_info)
-                        link_id += 1
-
-        return link_infos
-
-    except Exception as e:
-        logging.error(f"Error extracting links from {url}: {e}")
-        return []
-
-
-def extract_link_info_from_html(html_content: str, base_url: str, discovered_urls: Optional[set] = None, start_id: int = 0) -> List[LinkInfo]:
-    """
-    Extract link information from HTML content.
+    Extract comprehensive link information from HTML content.
 
     Args:
         html_content: The HTML content to parse
         base_url: The base URL for resolving relative URLs
         discovered_urls: Optional set of already discovered URLs to avoid duplicates
         start_id: Starting ID for link numbering
+        session_discovered_urls: Optional set of URLs discovered in current session
 
     Returns:
         List of LinkInfo objects
@@ -268,32 +175,73 @@ def extract_link_info_from_html(html_content: str, base_url: str, discovered_url
         link_infos = []
         link_id = start_id
 
+        # Track URLs within this parsing session to prevent duplicates within same HTML
+        internal_session_urls = set()
+
+        def add_link_if_unique(href: str, element, element_type: str = "link") -> bool:
+            """Helper to add link if it's unique across all tracking sets."""
+            nonlocal link_id
+            absolute_url = urljoin(base_url, href)
+
+            # Skip if already processed in this HTML parsing session
+            if absolute_url in internal_session_urls:
+                return False
+            internal_session_urls.add(absolute_url)
+
+            # Check against both discovered_urls and session_discovered_urls (like dynamic loading does)
+            if discovered_urls and absolute_url in discovered_urls:
+                return False
+            if session_discovered_urls and absolute_url in session_discovered_urls:
+                return False
+
+            link_info = _create_link_info(href, element, base_url, link_id, discovered_urls, element_type)
+            if link_info:
+                link_infos.append(link_info)
+                link_id += 1
+                return True
+            return False
+
         # 1. Standard anchor tags with href attributes
         for link_tag in soup.find_all('a', href=True):
             href = link_tag['href'].strip()
             if href and not href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(href, link_tag, base_url, link_id, discovered_urls)
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
+                add_link_if_unique(href, link_tag)
 
         # 2. Image map areas
         for area_tag in soup.find_all('area', href=True):
             href = area_tag['href'].strip()
             if href and not href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(href, area_tag, base_url, link_id, discovered_urls)
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
+                add_link_if_unique(href, area_tag)
 
         # 3. Forms with action attributes
         for form_tag in soup.find_all('form', action=True):
             action = form_tag['action'].strip()
             if action and not action.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                link_info = _create_link_info(action, form_tag, base_url, link_id, discovered_urls, element_type="form")
-                if link_info:
-                    link_infos.append(link_info)
-                    link_id += 1
+                add_link_if_unique(action, form_tag, "form")
+
+        # 4. Buttons with formaction
+        for button_tag in soup.find_all('button', formaction=True):
+            formaction = button_tag['formaction'].strip()
+            if formaction and not formaction.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                add_link_if_unique(formaction, button_tag)
+
+        # 5. Elements with data attributes (data-href, data-url, data-link)
+        data_attrs = ['data-href', 'data-url', 'data-link', 'data-target']
+        for attr in data_attrs:
+            for element in soup.find_all(attrs={attr: True}):
+                data_url = element.get(attr, '').strip()
+                if data_url and not data_url.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                    add_link_if_unique(data_url, element)
+
+        # 6. Clickable elements with onclick containing location or window.open
+        onclick_pattern = re.compile(r'(?:location\.href|window\.open)\s*\(\s*["\']([^"\']+)["\']', re.IGNORECASE)
+        for element in soup.find_all(attrs={"onclick": True}):
+            onclick = element.get('onclick', '')
+            match = onclick_pattern.search(onclick)
+            if match:
+                js_url = match.group(1).strip()
+                if js_url and not js_url.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                    add_link_if_unique(js_url, element)
 
         return link_infos
 

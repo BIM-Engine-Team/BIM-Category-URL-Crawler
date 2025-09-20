@@ -8,7 +8,7 @@ import time
 from typing import List, Dict, Any, Optional, Tuple
 
 from .models import WebsiteNode, LinkInfo
-from .utils import extract_link_info
+from .utils import extract_link_info_from_html
 from .ai_scoring import AIScoring
 
 
@@ -40,7 +40,13 @@ class NodeProcessor:
         self.logger.warning("[PAGE_PROCESSING] DEPRECATED: process_node called. This method should not be used in the new architecture.")
 
         # Extract children links and their information for compatibility
-        children_info = extract_link_info(node.url, self.session, self.discovered_urls)
+        try:
+            response = self.session.get(node.url, timeout=10)
+            response.raise_for_status()
+            children_info = extract_link_info_from_html(response.text, node.url, self.discovered_urls)
+        except Exception as e:
+            self.logger.error(f"Error fetching {node.url}: {e}")
+            children_info = []
 
         # Call the new method
         self.process_node_with_children_info(node, children_info, products, url_to_node)

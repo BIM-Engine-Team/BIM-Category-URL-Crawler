@@ -60,8 +60,6 @@ class ClaudeClient(BaseAIClient):
         logger = logging.getLogger(__name__)
 
         # Log the request details
-        logger.info(f"[CLAUDE_CLIENT] Sending request to Claude API")
-        logger.info(f"[CLAUDE_CLIENT] Model: {model}, Max tokens: {max_tokens}")
         logger.debug(f"[CLAUDE_CLIENT] System prompt: {system_prompt}")
         logger.debug(f"[CLAUDE_CLIENT] User message: {messages[0]['content']}")
         logger.debug(f"[CLAUDE_CLIENT] Full payload: {json.dumps(payload, indent=2)}")
@@ -73,9 +71,6 @@ class ClaudeClient(BaseAIClient):
                 json=payload,
                 timeout=60
             )
-
-            # Log the response status
-            logger.info(f"[CLAUDE_CLIENT] Received response with status: {response.status_code}")
 
             # Log the error details if request fails
             if not response.ok:
@@ -89,7 +84,6 @@ class ClaudeClient(BaseAIClient):
             ai_response = response_data["content"][0]["text"]
 
             # Log the successful response
-            logger.info(f"[CLAUDE_CLIENT] Successfully received Claude response (length: {len(ai_response)} chars)")
             logger.debug(f"[CLAUDE_CLIENT] Claude response content: {ai_response}")
 
             return ai_response
