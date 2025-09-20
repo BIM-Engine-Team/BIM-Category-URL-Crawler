@@ -9,6 +9,7 @@ import os
 from typing import List, Dict
 
 from src.crawler.ai_crawler import AIGuidedCrawler
+from src.util.result_cleaner import clean_crawler_results
 
 
 def load_task_config(config_path: str) -> Dict:
@@ -83,12 +84,31 @@ def main():
             print(f"   URL: {product['url']}")
             print()
 
-        # Save results
+        # Save raw results first
         if output_file:
-            crawler.save_results(output_file)
+            # Generate raw filename by adding _raw before extension
+            from pathlib import Path
+            output_path = Path(output_file)
+            raw_output_file = str(output_path.parent / f"{output_path.stem}_raw{output_path.suffix}")
+            final_output_file = output_file
         else:
-            # Save to default file
-            crawler.save_results()
+            # Use default filenames
+            raw_output_file = f"ai_crawl_results_{crawler.domain.replace('.', '_')}_raw.json"
+            final_output_file = f"ai_crawl_results_{crawler.domain.replace('.', '_')}.json"
+
+        # Save raw results
+        logger.info(f"Saving raw results to: {raw_output_file}")
+        crawler.save_results(raw_output_file)
+
+        # Clean duplicates from results (this is a necessary step)
+        logger.info("Cleaning duplicate products from results...")
+        try:
+            cleaned_file = clean_crawler_results(raw_output_file, final_output_file)
+            logger.info(f"✓ Duplicate cleaning completed. Final results saved to: {cleaned_file}")
+        except Exception as e:
+            logger.error(f"✗ Failed to clean duplicates: {e}")
+            logger.info("This is a critical step - crawling process incomplete")
+            return 1
 
         # Print summary
         results = crawler.get_results()
@@ -96,6 +116,8 @@ def main():
         print(f"  Products found: {len(results['products'])}")
         print(f"  Pages processed: {results['pages_processed']}")
         print(f"  Total nodes discovered: {results['total_nodes']}")
+        print(f"  Raw results: {raw_output_file}")
+        print(f"  Final results: {final_output_file}")
 
     except Exception as e:
         logger.error(f"Error during crawling: {e}")

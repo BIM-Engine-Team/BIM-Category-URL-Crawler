@@ -61,18 +61,21 @@ class NodeProcessor:
             if i < len(scores):
                 score = scores[i].get("score", 0.0)
                 # Color code based on score ranges
-                if score <= 1.0:
+                if score < 1.0:
                     # Gray for very low scores (0-1)
                     colored_score = f"\033[90m{link_info.relative_path}: {score}\033[0m"
-                elif score <= 5.0:
+                elif score < 5.0:
                     # Blue for low-medium scores (1-5)
                     colored_score = f"\033[94m{link_info.relative_path}: {score}\033[0m"
-                elif score <= 9.0:
-                    # Green for medium-high scores (5-9)
+                elif score < 8.0:
+                    # Green for medium scores (5-8)
                     colored_score = f"\033[92m{link_info.relative_path}: {score}\033[0m"
-                else:
-                    # Yellow for high scores (>9)
+                elif score < 9.0:
+                    # Yellow for high scores (8-9)
                     colored_score = f"\033[93m{link_info.relative_path}: {score}\033[0m"
+                else:
+                    # Orange for high scores (9-10)
+                    colored_score = f"\033[38;5;208m{link_info.relative_path}: {score}\033[0m"
                 score_summary.append(colored_score)
         self.logger.info(f"[AI_SCORES] {', '.join(score_summary)}")
 
@@ -117,7 +120,7 @@ class NodeProcessor:
                 child_node.is_explored = True
                 self.logger.debug(f"[PAGE_PROCESSING] SKIPPING '{link_info.title}' (score: {score} < 1.0)")
                 skipped_count += 1
-            elif score > 9.0:
+            elif score >= 9.0:
                 # Very high score - likely product page
                 child_node.is_explored = True
                 if product_name:

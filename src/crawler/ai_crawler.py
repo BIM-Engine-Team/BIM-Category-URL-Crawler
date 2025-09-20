@@ -75,7 +75,7 @@ class AIGuidedCrawler:
         self.node_processor = NodeProcessor(self.ai_scoring, self.session, self.delay, self.discovered_urls)
         self.dynamic_handler = DynamicLoadingHandler(self.domain, self.delay)
 
-    def process_node(self, node: WebsiteNode) -> None:
+    def process_node(self, node: WebsiteNode) -> bool:
         """
         Process a single node using AI to score its children.
 
@@ -100,7 +100,7 @@ class AIGuidedCrawler:
                 self.logger.info(f"[PAGE_PROCESSING] ✓ PRODUCT FOUND: '{detected_product_name}' at {node.url} (direct score: {node.score})")
                 # Mark as explored and return early
                 node.is_explored = True
-                return
+                return False
 
         # Mark this node as explored
         node.is_explored = True
@@ -110,13 +110,17 @@ class AIGuidedCrawler:
             response = self.session.get(node.url, timeout=10)
             response.raise_for_status()
             children_info = extract_link_info_from_html(response.text, node.url, self.discovered_urls)
+            # Update discovered_urls with the children_info
+            for link_info in children_info:
+                if link_info.url not in self.discovered_urls:
+                    self.discovered_urls.add(link_info.url)
         except Exception as e:
             self.logger.error(f"Error fetching {node.url}: {e}")
             children_info = []
 
         if not children_info:
             self.logger.warning(f"[PAGE_PROCESSING] No links found on {node.url}")
-            return
+            return True
 
         self.logger.info(f"[PAGE_PROCESSING] Found {len(children_info)} links on {node.url}")
 
@@ -133,6 +137,10 @@ class AIGuidedCrawler:
                 self.logger.info(f"[PAGE_PROCESSING] Found {len(additional_links)} additional links via dynamic loading")
                 # Complement the original children_info with findings
                 complemented_children_info = children_info + additional_links
+                # Update discovered_urls with the additional_links
+                for link_info in additional_links:
+                    if link_info.url not in self.discovered_urls:
+                        self.discovered_urls.add(link_info.url)
             else:
                 self.logger.info(f"[PAGE_PROCESSING] No additional links found via dynamic loading")
                 complemented_children_info = children_info
@@ -140,11 +148,6 @@ class AIGuidedCrawler:
         except Exception as e:
             self.logger.error(f"[PAGE_PROCESSING] Error in dynamic loading check for {node.url}: {e}")
             complemented_children_info = children_info
-
-        # Update discovered_urls with the complemented children_info
-        for link_info in complemented_children_info:
-            if link_info.url not in self.discovered_urls:
-                self.discovered_urls.add(link_info.url)
 
         # Use the node processor to handle the main processing logic with complemented children_info
         self.node_processor.process_node_with_children_info(node, complemented_children_info, self.products, self.url_to_node)
@@ -158,6 +161,7 @@ class AIGuidedCrawler:
         # Respect rate limiting
         import time
         time.sleep(self.delay)
+        return True
 
     def crawl(self) -> List[Dict[str, str]]:
         """
@@ -184,8 +188,8 @@ class AIGuidedCrawler:
                 continue
 
             # Process the node
-            self.process_node(current_node)
-            pages_processed += 1
+            if self.process_node(current_node):
+                pages_processed += 1
 
             self.logger.info(f"Progress: {pages_processed} pages processed, "
                            f"{len(self.products)} products found, "

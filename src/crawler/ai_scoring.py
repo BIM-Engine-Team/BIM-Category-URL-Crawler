@@ -52,8 +52,11 @@ class AIScoring:
 
         prompt = f"""You come to a page with a list of links. Here is the ID, relative path, title and description of each link.
 Score them from 0 - 10 according to how likely the link will lead you to the product description page.
-A score less than 1 is for links you will never click.
-A score higher than 9 is for links you think is very likely to be the product description page of a specific product. For these kind of link, you will also tell the product name.
+< 1 is for links you will never click.
+1 <= score < 4 is for links you will consider only when you have no other choice.
+4 <= score < 8 is for links on the right path to the product description page.
+8 <= score < 9 is for links that are likely to be the product description page of a specific product, but need more information to confirm.
+9 <= score < 10 is for links that are very likely to be the product description page of a specific product. For these kind of link, you will also tell the product name.
 
 Links to analyze:
 {json.dumps(children_data, indent=2)}"""
