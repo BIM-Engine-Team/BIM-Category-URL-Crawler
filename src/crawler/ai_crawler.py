@@ -22,7 +22,7 @@ class AIGuidedCrawler:
     """AI-guided web crawler that uses AI to prioritize exploration paths."""
 
     def __init__(self, base_url: str, delay: float = 1.0, max_pages: int = 50,
-                 ai_provider: str = None, ai_model: str = None):
+                 ai_provider: str = None, ai_model: str = None, enable_dynamic_loading: bool = False):
         """
         Initialize the AI-guided crawler.
 
@@ -32,6 +32,7 @@ class AIGuidedCrawler:
             max_pages: Maximum number of pages to explore
             ai_provider: AI provider to use (overrides config.json)
             ai_model: AI model to use (overrides config.json)
+            enable_dynamic_loading: Enable dynamic content detection with Playwright (default: False)
         """
         self.base_url = base_url.rstrip('/')
         self.domain = urlparse(base_url).netloc
@@ -70,10 +71,20 @@ class AIGuidedCrawler:
             self.logger.warning(f"Could not load system prompt from JSON: {e}")
             system_prompt = "You are an architect. You want to find the product information from a supplier's website."
 
+        # Store dynamic loading flag
+        self.enable_dynamic_loading = enable_dynamic_loading
+
         # Initialize components
         self.ai_scoring = AIScoring(system_prompt, ai_provider, ai_model)
         self.node_processor = NodeProcessor(self.ai_scoring, self.session, self.delay, self.discovered_urls)
-        self.dynamic_handler = DynamicLoadingHandler(self.domain, self.delay)
+
+        # Only initialize dynamic handler if enabled
+        if self.enable_dynamic_loading:
+            self.dynamic_handler = DynamicLoadingHandler(self.domain, self.delay)
+            self.logger.info("[INIT] Dynamic loading detection: ENABLED")
+        else:
+            self.dynamic_handler = None
+            self.logger.info("[INIT] Dynamic loading detection: DISABLED")
 
     def process_node(self, node: WebsiteNode) -> bool:
         """
@@ -124,30 +135,36 @@ class AIGuidedCrawler:
 
         self.logger.info(f"[PAGE_PROCESSING] Found {len(children_info)} links on {node.url}")
 
-        # Check and exhaust dynamic loading on ALL pages using pruned children_info
-        self.logger.info(f"[PAGE_PROCESSING] Checking for dynamic loading on {node.url}...")
-        try:
-            additional_links = asyncio.run(
-                self.dynamic_handler.check_and_exhaust_dynamic_loading(
-                    node.url, self.discovered_urls  # Use empty set to avoid updating discovered_urls here
+        # Check and exhaust dynamic loading on ALL pages using pruned children_info (if enabled)
+        if self.enable_dynamic_loading and self.dynamic_handler:
+            self.logger.info(f"[PAGE_PROCESSING] Checking for dynamic loading on {node.url}...")
+            try:
+                additional_links = asyncio.run(
+                    self.dynamic_handler.check_and_exhaust_dynamic_loading(
+                        node.url, self.discovered_urls  # Use empty set to avoid updating discovered_urls here
+                    )
                 )
-            )
 
-            if additional_links:
-                self.logger.info(f"[PAGE_PROCESSING] Found {len(additional_links)} additional links via dynamic loading")
-                # Complement the original children_info with findings
-                complemented_children_info = children_info + additional_links
-                # Update discovered_urls with the additional_links
-                for link_info in additional_links:
-                    if link_info.url not in self.discovered_urls:
-                        self.discovered_urls.add(link_info.url)
-            else:
-                self.logger.info(f"[PAGE_PROCESSING] No additional links found via dynamic loading")
+                if additional_links:
+                    self.logger.info(f"[PAGE_PROCESSING] Found {len(additional_links)} additional links via dynamic loading")
+                    # Complement the original children_info with findings
+                    complemented_children_info = children_info + additional_links
+                    # Update discovered_urls with the additional_links
+                    for link_info in additional_links:
+                        if link_info.url not in self.discovered_urls:
+                            self.discovered_urls.add(link_info.url)
+                else:
+                    self.logger.info(f"[PAGE_PROCESSING] No additional links found via dynamic loading")
+                    complemented_children_info = children_info
+
+            except Exception as e:
+                self.logger.error(f"[PAGE_PROCESSING] Error in dynamic loading check for {node.url}: {e}")
                 complemented_children_info = children_info
-
-        except Exception as e:
-            self.logger.error(f"[PAGE_PROCESSING] Error in dynamic loading check for {node.url}: {e}")
+        else:
+            # Dynamic loading disabled, use only static content
             complemented_children_info = children_info
+            if not self.enable_dynamic_loading:
+                self.logger.debug(f"[PAGE_PROCESSING] Dynamic loading detection is disabled (skipping for {node.url})")
 
         # Use the node processor to handle the main processing logic with complemented children_info
         self.node_processor.process_node_with_children_info(node, complemented_children_info, self.products, self.url_to_node)

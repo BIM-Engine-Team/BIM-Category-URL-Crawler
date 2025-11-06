@@ -50,6 +50,7 @@ def main():
         delay = config.get('delay', 1.0)
         max_pages = config.get('max_pages', 50)
         output_file = config.get('output')
+        enable_dynamic_loading = config.get('enable_dynamic_loading', False)
 
         # Extract AI configuration from task config if present
         ai_provider = config.get('ai_provider')
@@ -59,6 +60,7 @@ def main():
         logger.info(f"  URL: {base_url}")
         logger.info(f"  Delay: {delay}s")
         logger.info(f"  Max pages: {max_pages}")
+        logger.info(f"  Dynamic loading: {'enabled' if enable_dynamic_loading else 'disabled'}")
         logger.info(f"  Output file: {output_file or 'auto-generated'}")
         if ai_provider or ai_model:
             logger.info(f"  AI Provider: {ai_provider or 'default'}")
@@ -71,7 +73,8 @@ def main():
             delay=delay,
             max_pages=max_pages,
             ai_provider=ai_provider,
-            ai_model=ai_model
+            ai_model=ai_model,
+            enable_dynamic_loading=enable_dynamic_loading
         )
 
         # Start crawling
